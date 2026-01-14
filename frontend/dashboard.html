@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Naalu Aksharam Padikk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-left">
+                <div class="logo-section">
+                    <h1 class="logo">📚 Naalu Aksharam Padikk</h1>
+                    <p class="tagline">Connect. Learn. Grow Together.</p>
+                </div>
+            </div>
+            <div class="navbar-right">
+                <div class="streak-display">
+                    <div class="streak-icon">🔥</div>
+                    <div class="streak-info">
+                        <p class="streak-label">Streak</p>
+                        <p class="streak-count" id="streakCount">5</p>
+                    </div>
+                </div>
+                <div class="user-info">
+                    <span class="user-name" id="userName">Loading...</span>
+                    <button class="logout-btn" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-container">
+        <!-- Welcome Section -->
+        <section class="welcome-section">
+            <h2 class="welcome-title">Welcome to Your Academic Community</h2>
+            <p class="welcome-subtitle">Track your progress, connect with mentors, and master your subjects</p>
+        </section>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card card-mentors">
+                <div class="card-border"></div>
+                <div class="card-content">
+                    <h3 class="card-label">Active Mentors</h3>
+                    <div class="card-number" id="activeMentorsCount">--</div>
+                    <p class="card-text">Available to help you</p>
+                </div>
+            </div>
+
+            <div class="card card-logs">
+                <div class="card-border"></div>
+                <div class="card-content">
+                    <h3 class="card-label">Study Logs</h3>
+                    <div class="card-number" id="studyLogsCount">--</div>
+                    <p class="card-text" id="studyLogsTrend">Track your progress</p>
+                </div>
+            </div>
+
+            <div class="card card-plans">
+                <div class="card-border"></div>
+                <div class="card-content">
+                    <h3 class="card-label">Active Plans</h3>
+                    <div class="card-number" id="activePlansCount">--</div>
+                    <p class="card-text">Continue your journey</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab Navigation -->
+        <section class="tab-section">
+            <div class="tabs">
+                <button class="tab-btn" data-tab="mentorship">Mentorship</button>
+                <button class="tab-btn" data-tab="study-log">Study Log</button>
+                <button class="tab-btn active" data-tab="catch-up">Catch-Up</button>
+                <button class="tab-btn" data-tab="profile">Profile</button>
+            </div>
+        </section>
+
+        <!-- Mentorship Section -->
+        <section class="mentorship-section tab-content" id="tab-mentorship" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">👥 Find Your Mentor</h2>
+                <p class="section-subtitle">Connect with verified seniors who are ready to guide you through your academic journey</p>
+            </div>
+
+            <!-- Search Box -->
+            <div class="search-container">
+                <input type="text" id="mentorSearch" class="search-input" placeholder="Search by name, department, or expertise...">
+            </div>
+
+            <!-- Mentors Container (populated by JS) -->
+            <div id="mentorsContainer">
+                <p class="empty-state">Loading mentors...</p>
+            </div>
+
+            <!-- My Connections Section -->
+            <div class="section-header" style="margin-top: 60px;">
+                <h2 class="section-title">💬 My Connections</h2>
+                <p class="section-subtitle">Your mentors and study partners</p>
+            </div>
+
+            <div id="connectionsContainer">
+                <p class="empty-state">No connections yet. Find a mentor above!</p>
+            </div>
+        </section>
+
+        <!-- Study Log Section -->
+        <section class="study-log-section tab-content" id="tab-study-log" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">📖 My Study Logs</h2>
+                <p class="section-subtitle">Your daily accountability tracker</p>
+            </div>
+
+            <div class="study-log-header">
+                <button class="action-btn primary" id="addLogBtn">+ Add Log</button>
+            </div>
+
+            <!-- Study Logs List (populated by JS) -->
+            <div id="studyLogsContainer">
+                <p class="empty-state">No study logs yet. Add your first one to start tracking!</p>
+            </div>
+
+            <!-- Community Feed Section -->
+            <div class="section-header" style="margin-top: 60px;">
+                <h2 class="section-title">🏆 Community Feed</h2>
+                <p class="section-subtitle">Get inspired by your peers' progress</p>
+            </div>
+
+            <div id="communityFeedContainer">
+                <p class="empty-state">No public posts in the community yet.</p>
+            </div>
+        </section>
+
+        <!-- Catch-Up Plans Section -->
+        <section class="catch-up-section tab-content" id="tab-catch-up" style="display: block;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="rocket-icon">🚀</span>
+                    Smart Catch-Up Plans
+                </h2>
+                <p class="section-subtitle">Personalized study roadmaps to help you master subjects</p>
+            </div>
+
+            <!-- Plans Container (populated by JS) -->
+            <div id="plansContainer">
+                <p class="empty-state">No active catch-up plans yet. Create one to get started!</p>
+            </div>
+        </section>
+
+        <!-- Roadmap to Success Section -->
+        <section class="roadmap-section">
+            <div class="roadmap-header">
+                <h2 class="roadmap-title">Your Roadmap to Success</h2>
+                <p class="roadmap-subtitle">Daily milestones for your learning journey</p>
+            </div>
+
+            <div class="roadmap-list" id="roadmapContainer">
+                <p class="empty-state">No active roadmap. Start a catch-up plan to see daily tasks!</p>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section class="profile-section tab-content" id="tab-profile" style="display: none;">
+            <div class="profile-container">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">RV</div>
+                    <div class="profile-info">
+                        <h2 class="profile-name" id="profileName">Loading...</h2>
+                        <p class="profile-meta" id="profileMeta">Loading...</p>
+                        <div class="profile-roles">
+                            <span class="role-badge" id="profileRoles">Student</span>
+                        </div>
+                    </div>
+                    <button class="action-btn primary" id="editProfileBtn">✏️ Edit Profile</button>
+                </div>
+
+                <!-- Stats Overview -->
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <div class="stat-icon">📚</div>
+                        <div class="stat-content">
+                            <p class="stat-label">Study Logs</p>
+                            <p class="stat-value" id="profileStudyLogs">45</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-content">
+                            <p class="stat-label">Current Streak</p>
+                            <p class="stat-value" id="profileStreak">5 days</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <p class="stat-label">Total Hours</p>
+                            <p class="stat-value" id="profileHours">87h</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Achievements Section -->
+                <div class="achievements-section">
+                    <h3 class="achievements-title">🏆 Your Achievements</h3>
+                    <p class="achievements-subtitle">Unlock badges by staying consistent and helping others</p>
+                    <div class="achievements-grid" id="achievementsContainer">
+                        <p class="empty-state">Complete tasks to earn achievements!</p>
+                    </div>
+                </div>
+
+                <!-- Interests Section -->
+                <div class="interests-section">
+                    <h3 class="interests-title">📌 Interests</h3>
+                    <div class="interests-tags" id="interestsContainer">
+                        <p class="empty-state">Add your interests to find similar mentors!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Naalu Aksharam Padikk. Empowering student success through mentorship and support.</p>
+    </footer>
+
+    <!-- Firebase SDK & Dashboard Script -->
+    <script type="module" src="dashboard.js"></script>
+</body>
+</html>

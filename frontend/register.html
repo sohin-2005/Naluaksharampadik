@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Nalu Aksharam Padik</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase CDN -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+      import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+      import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+
+      // Firebase config - Replace with your actual config
+     const firebaseConfig = {
+  apiKey: "AIzaSyC_9en-PEY9M9qWexgH9iHUKmpJCCbgOUk",
+  authDomain: "nalu-aksharam-padik.firebaseapp.com",
+  projectId: "nalu-aksharam-padik",
+  storageBucket: "nalu-aksharam-padik.firebasestorage.app",
+  messagingSenderId: "805693800610",
+  appId: "1:805693800610:web:b58a792844f4af070657fb",
+  measurementId: "G-DC9F3R71RN"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
+      window.registerUser = async (email, password) => {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          console.log('Registration successful:', user);
+
+          // Save user data to Firestore
+          await setDoc(doc(db, 'users', user.uid), {
+            email: user.email,
+            createdAt: new Date(),
+            uid: user.uid
+          });
+
+          alert('Registration successful!');
+          window.location.href = 'login.html';
+        } catch (error) {
+          console.error('Registration error:', error);
+          alert('Registration failed: ' + error.message);
+        }
+      };
+    </script>
+</head>
+<body>
+    <!-- Background Particles -->
+    <div id="particles"></div>
+
+    <!-- Fixed Glassmorphism Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">Nalu Aksharam Padik</div>
+            <div class="nav-menu">
+                <a href="index.html">Home</a>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+            </div>
+            <div class="nav-actions">
+                <a href="login.html" class="login-btn">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Register Section -->
+    <section class="auth-section">
+        <div class="auth-container">
+            <div class="auth-card">
+                <h2>Create Account</h2>
+                <p>Join us today</p>
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    <button type="submit" class="auth-btn">Sign Up</button>
+                </form>
+                <p class="auth-link">Already have an account? <a href="login.html">Sign in</a></p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function handleRegister(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            window.registerUser(email, password);
+        }
+
+        // Create particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            if (!particlesContainer) return;
+            const numParticles = 30;
+            for (let i = 0; i < numParticles; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 20) + 's';
+                particle.style.width = particle.style.height = Math.random() * 3 + 1 + 'px';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        window.addEventListener('load', createParticles);
+    </script>
+</body>
+</html>
