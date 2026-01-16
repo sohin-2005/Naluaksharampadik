@@ -248,6 +248,189 @@ ${timetableText.substring(0, 15000)}
   }
 });
 
+// Catch-Up Plan Generator endpoint
+app.post('/api/generate-catchup-plan', async (req, res) => {
+  try {
+    console.log('📥 Incoming Catch-Up Plan request', {
+      contentType: req.headers['content-type'],
+      bodyKeys: Object.keys(req.body || {})
+    });
+
+    let {
+      subject,
+      examDate,
+      currentCompletionPercentage,
+      topicsToComplete,
+      dailyAvailableHours,
+      studentName = 'Student'
+    } = req.body;
+
+    // Parse if needed
+    if (typeof topicsToComplete === 'string') {
+      try { topicsToComplete = JSON.parse(topicsToComplete); } catch {}
+    }
+    if (typeof currentCompletionPercentage === 'string') {
+      currentCompletionPercentage = parseFloat(currentCompletionPercentage);
+    }
+    if (typeof dailyAvailableHours === 'string') {
+      dailyAvailableHours = parseFloat(dailyAvailableHours);
+    }
+
+    // Validation
+    if (!subject || !examDate || !topicsToComplete) {
+      console.warn('⚠️  Validation failed', { subject, examDate, topicsToComplete });
+      return res.status(400).json({
+        error: 'Missing required fields: subject, examDate, topicsToComplete'
+      });
+    }
+
+    // Validate Groq API key
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({
+        error: 'Groq API key not configured'
+      });
+    }
+
+    // Calculate days remaining
+    const today = new Date();
+    const exam = new Date(examDate);
+    const daysRemaining = Math.ceil((exam.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0) {
+      return res.status(400).json({
+        error: 'Exam date has already passed'
+      });
+    }
+
+    // Build topics list
+    const topicsList = Array.isArray(topicsToComplete)
+      ? topicsToComplete.join('\n- ')
+      : topicsToComplete;
+
+    const prompt = `
+You are an expert academic advisor creating a realistic catch-up study plan.
+
+STUDENT SITUATION:
+- Name: ${studentName}
+- Subject: ${subject}
+- Exam Date: ${examDate}
+- Days Remaining: ${daysRemaining} days
+- Current Completion: ${currentCompletionPercentage || 0}%
+- Daily Available Study Hours: ${dailyAvailableHours || 3} hours
+
+TOPICS TO COMPLETE:
+${topicsList}
+
+TASK:
+Create a detailed, day-by-day catch-up study plan that is realistic and achievable. Consider:
+1. The time remaining until the exam
+2. Current completion percentage
+3. Daily available study hours
+4. Topic difficulty and priority
+5. Include buffer days for revision
+6. Last 2-3 days should be reserved for full revision and mock tests
+
+REQUIREMENTS:
+- Be realistic about what can be covered per day
+- Prioritize high-weightage topics
+- Include short breaks and revision sessions
+- Flag if the plan is too aggressive (impossible to complete)
+- Provide motivational but honest feedback
+
+FORMAT STRICTLY AS:
+## Feasibility Assessment
+[REALISTIC/TIGHT/IMPOSSIBLE] - Brief explanation
+
+## Study Schedule (Day-by-Day)
+### Day 1 (${new Date(today.getTime() + 86400000).toLocaleDateString()})
+- Topic: [Topic Name]
+- Duration: [Hours]
+- Key Points: [Bullet points]
+- Resources: [Suggested resources]
+
+### Day 2 (${new Date(today.getTime() + 2*86400000).toLocaleDateString()})
+...
+[Continue for all days until exam]
+
+## Priority Topics (High to Low)
+1. [Topic] - Why: [Reason]
+2. [Topic] - Why: [Reason]
+...
+
+## Revision Strategy
+- Days allocated: X days
+- Focus areas: ...
+- Mock test schedule: ...
+
+## Success Tips
+- Tip 1: ...
+- Tip 2: ...
+- Tip 3: ...
+
+## Warning Signs
+- If you fall behind by 2+ days, seek help immediately
+- [Other warnings]
+`;
+
+    console.log('📨 Sending catch-up plan request to Groq...');
+    console.log(`Subject: ${subject} | Days: ${daysRemaining} | Topics: ${Array.isArray(topicsToComplete) ? topicsToComplete.length : 'N/A'}`);
+
+    // Call Groq API
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_tokens: 2048
+    });
+
+    const plan = completion.choices[0]?.message?.content || '';
+
+    console.log('✅ Catch-up plan generated successfully');
+
+    // Return structured response
+    res.json({
+      success: true,
+      data: {
+        subject,
+        examDate,
+        daysRemaining,
+        currentCompletion: currentCompletionPercentage || 0,
+        generatedAt: new Date().toISOString(),
+        studentName,
+        plan
+      }
+    });
+
+  } catch (error) {
+    console.error('💥 Error in Catch-Up Plan endpoint:', error.message);
+
+    // Handle specific errors
+    if (error.message.includes('API key')) {
+      return res.status(500).json({
+        error: 'Groq API key is invalid or missing',
+        details: error.message
+      });
+    }
+
+    if (error.message.includes('rate limit')) {
+      return res.status(429).json({
+        error: 'API rate limit exceeded. Please try again later.'
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to generate catch-up plan',
+      details: error.message,
+      hint: 'Check backend logs for more information'
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled error:', err);
@@ -261,6 +444,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
   console.log(`📝 SemSense AI endpoint: POST http://localhost:${PORT}/api/semsense-ai`);
+  console.log(`📋 Catch-Up Plan endpoint: POST http://localhost:${PORT}/api/generate-catchup-plan`);
   console.log(`🏥 Health check: GET http://localhost:${PORT}/api/health`);
   
   if (!process.env.GROQ_API_KEY) {

@@ -3,7 +3,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 
 export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL}/api/health`,
-  SEMSENSE_AI: `${API_BASE_URL}/api/semsense-ai`
+  SEMSENSE_AI: `${API_BASE_URL}/api/semsense-ai`,
+  CATCHUP_PLAN: `${API_BASE_URL}/api/generate-catchup-plan`
 };
 
 // Helper function to call SemSense AI
@@ -73,5 +74,39 @@ export async function checkBackendHealth() {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+// Helper function to generate catch-up plan
+export async function generateCatchUpPlan(planData: {
+  subject: string;
+  examDate: string;
+  currentCompletionPercentage?: number;
+  topicsToComplete: string[];
+  dailyAvailableHours?: number;
+  studentName?: string;
+}) {
+  try {
+    console.log('📨 Calling Catch-Up Plan endpoint...');
+    
+    const response = await fetch(API_ENDPOINTS.CATCHUP_PLAN, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(planData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate catch-up plan');
+    }
+
+    const data = await response.json();
+    console.log('✅ Catch-up plan received:', data);
+    return data;
+  } catch (error) {
+    console.error('💥 Error generating catch-up plan:', error);
+    throw error;
   }
 }

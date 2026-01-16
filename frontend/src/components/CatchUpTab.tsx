@@ -1,209 +1,529 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { CheckCircle, Circle, BookOpen } from 'lucide-react';
+import { Target, Loader2, Calendar, Clock, AlertCircle, Brain, Plus, X, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { generateCatchUpPlan } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../config/supabase';
 
-// Simple Progress component since I missed it in UI batch
-function SimpleProgress({ value, className }: { value: number, className?: string }) {
-    return (
-        <div className={`h-2 w-full bg-secondary rounded-full overflow-hidden ${className}`}>
-            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${value}%` }} />
-        </div>
-    )
-}
-
-interface Task {
-    id: string;
-    day: number;
-    title: string;
-    completed: boolean;
-}
-
-interface Plan {
-    id: string;
-    subject: string;
-    examDate: string;
-    status: 'on-track' | 'behind' | 'completed';
-    progress: number;
-    totalTasks: number;
-    completedTasks: number;
-    roadmap: Task[];
+interface CatchUpPlan {
+  id: string;
+  subject: string;
+  examDate: string;
+  daysRemaining: number;
+  currentCompletion: number;
+  generatedPlan: string;
+  createdAt: string;
+  status: 'active' | 'completed';
 }
 
 export function CatchUpTab() {
-    const [plans, setPlans] = useState<Plan[]>([
-        {
-            id: '1',
-            subject: 'Engineering Mathematics III',
-            examDate: '2026-05-15',
-            status: 'behind',
-            progress: 35,
-            totalTasks: 20,
-            completedTasks: 7,
-            roadmap: [
-                { id: 't1', day: 1, title: 'Laplace Transforms Basics', completed: true },
-                { id: 't2', day: 2, title: 'Inverse Laplace Transforms', completed: true },
-                { id: 't3', day: 3, title: 'Fourier Series', completed: false },
-                { id: 't4', day: 4, title: 'Partial Differential Equations', completed: false },
-            ]
-        }
-    ]);
+  const { userProfile } = useAuth();
+  const [plans, setPlans] = useState<CatchUpPlan[]>([]);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<CatchUpPlan | null>(null);
 
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newSubject, setNewSubject] = useState('');
-    const [newDate, setNewDate] = useState('');
+  // Form state
+  const [subject, setSubject] = useState('');
+  const [examDate, setExamDate] = useState('');
+  const [currentCompletion, setCurrentCompletion] = useState('0');
+  const [dailyHours, setDailyHours] = useState('3');
+  const [topics, setTopics] = useState<string[]>(['']);
 
-    const handleCreatePlan = () => {
-        if (!newSubject || !newDate) return;
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchPlans();
+    }
+  }, [userProfile]);
 
-        const newPlan: Plan = {
-            id: Date.now().toString(),
-            subject: newSubject,
-            examDate: newDate,
-            status: 'on-track',
-            progress: 0,
-            totalTasks: 14, // Mock
-            completedTasks: 0,
-            roadmap: Array.from({ length: 5 }, (_, i) => ({
-                id: `new-${i}`,
-                day: i + 1,
-                title: `Day ${i + 1} Study Topic`,
-                completed: false
-            }))
-        };
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('catch_up_plans')
+        .select('*')
+        .eq('user_id', userProfile?.id)
+        .order('created_at', { ascending: false });
 
-        setPlans([...plans, newPlan]);
-        setIsCreateOpen(false);
-        setNewSubject('');
-        setNewDate('');
-    };
+      if (error) throw error;
 
-    const toggleTask = (planId: string, taskId: string) => {
-        setPlans(plans.map(plan => {
-            if (plan.id !== planId) return plan;
+      // Transform to match our interface
+      const transformed: CatchUpPlan[] = (data || []).map(plan => ({
+        id: plan.id,
+        subject: plan.title,
+        examDate: plan.deadline || new Date().toISOString(),
+        daysRemaining: Math.ceil((new Date(plan.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+        currentCompletion: 0,
+        generatedPlan: plan.description || '',
+        createdAt: plan.created_at,
+        status: plan.status === 'completed' ? 'completed' : 'active'
+      }));
 
-            const newRoadmap = plan.roadmap.map(task =>
-                task.id === taskId ? { ...task, completed: !task.completed } : task
-            );
+      setPlans(transformed);
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+    }
+  };
 
-            const completedCount = newRoadmap.filter(t => t.completed).length;
-            const progress = Math.round((completedCount / plan.totalTasks) * 100); // normalized to total tasks
+  const addTopicField = () => {
+    setTopics([...topics, '']);
+  };
 
-            return {
-                ...plan,
-                roadmap: newRoadmap,
-                completedTasks: completedCount,
-                progress: Math.min(progress, 100) // Simple mock math
-            };
-        }));
-    };
+  const removeTopicField = (index: number) => {
+    setTopics(topics.filter((_, i) => i !== index));
+  };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Catch-Up Plans</h2>
-                    <p className="text-muted-foreground">Your personalized roadmap to academic recovery.</p>
-                </div>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button>Create New Plan</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Create Catch-Up Plan</DialogTitle>
-                            <DialogDescription>
-                                We'll generate a daily roadmap based on your exam date.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Subject</Label>
-                                <Input
-                                    placeholder="e.g. Data Structures"
-                                    value={newSubject}
-                                    onChange={e => setNewSubject(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Exam Date</Label>
-                                <Input
-                                    type="date"
-                                    value={newDate}
-                                    onChange={e => setNewDate(e.target.value)}
-                                />
-                            </div>
-                            <Button className="w-full" onClick={handleCreatePlan} disabled={!newSubject || !newDate}>
-                                Generate Roadmap
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            </div>
+  const updateTopic = (index: number, value: string) => {
+    const updated = [...topics];
+    updated[index] = value;
+    setTopics(updated);
+  };
 
-            {plans.length === 0 ? (
-                <Card className="text-center py-12">
-                    <CardContent>
-                        <div className="flex justify-center mb-4">
-                            <BookOpen className="h-12 w-12 text-muted-foreground/50" />
-                        </div>
-                        <h3 className="text-lg font-semibold">No active catch-up plans</h3>
-                        <p className="text-muted-foreground mb-4">Start a plan to get back on track!</p>
-                        <Button onClick={() => setIsCreateOpen(true)}>Create Plan</Button>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid gap-6">
-                    {plans.map(plan => (
-                        <Card key={plan.id}>
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle>{plan.subject}</CardTitle>
-                                        <CardDescription>Target: {new Date(plan.examDate).toLocaleDateString()}</CardDescription>
-                                    </div>
-                                    <Badge variant={plan.status === 'on-track' ? 'default' : 'destructive'}>
-                                        {plan.status === 'on-track' ? 'On Track' : 'Behind Schedule'}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>Progress ({plan.progress}%)</span>
-                                        <span>{plan.completedTasks} / {plan.totalTasks} tasks</span>
-                                    </div>
-                                    <SimpleProgress value={plan.progress} />
-                                </div>
+  const handleGeneratePlan = async () => {
+    setError(null);
+    setIsGenerating(true);
 
-                                <ScrollArea className="h-[200px] rounded-md border p-4">
-                                    <div className="space-y-4">
-                                        {plan.roadmap.map(task => (
-                                            <div key={task.id} className="flex items-center gap-3 group">
-                                                <button onClick={() => toggleTask(plan.id, task.id)} className="text-muted-foreground hover:text-primary transition-colors">
-                                                    {task.completed ?
-                                                        <CheckCircle className="h-5 w-5 text-green-500" /> :
-                                                        <Circle className="h-5 w-5" />
-                                                    }
-                                                </button>
-                                                <div className={task.completed ? 'opacity-50 line-through transition-all' : ''}>
-                                                    <p className="text-sm font-medium">Day {task.day}: {task.title}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
+    try {
+      // Validation
+      if (!subject || !examDate) {
+        throw new Error('Please fill in subject and exam date');
+      }
+
+      const filteredTopics = topics.filter(t => t.trim().length > 0);
+      if (filteredTopics.length === 0) {
+        throw new Error('Please add at least one topic to complete');
+      }
+
+      // Check if exam date is in the future
+      const exam = new Date(examDate);
+      if (exam.getTime() < Date.now()) {
+        throw new Error('Exam date must be in the future');
+      }
+
+      console.log('📊 Generating catch-up plan...');
+
+      // Call AI API
+      const result = await generateCatchUpPlan({
+        subject,
+        examDate,
+        currentCompletionPercentage: parseFloat(currentCompletion),
+        topicsToComplete: filteredTopics,
+        dailyAvailableHours: parseFloat(dailyHours),
+        studentName: userProfile?.full_name || 'Student'
+      });
+
+      console.log('✅ Plan generated:', result);
+
+      // Save to database
+      const { data: savedPlan, error: saveError } = await supabase
+        .from('catch_up_plans')
+        .insert([{
+          user_id: userProfile?.id,
+          title: subject,
+          description: result.data.plan,
+          deadline: examDate,
+          subjects: filteredTopics,
+          status: 'in_progress',
+          roadmap: {
+            daysRemaining: result.data.daysRemaining,
+            currentCompletion: result.data.currentCompletion,
+            dailyHours: parseFloat(dailyHours)
+          }
+        }])
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+
+      // Add to local state
+      const newPlan: CatchUpPlan = {
+        id: savedPlan.id,
+        subject,
+        examDate,
+        daysRemaining: result.data.daysRemaining,
+        currentCompletion: result.data.currentCompletion,
+        generatedPlan: result.data.plan,
+        createdAt: new Date().toISOString(),
+        status: 'active'
+      };
+
+      setPlans([newPlan, ...plans]);
+      setSelectedPlan(newPlan);
+
+      // Reset form
+      setIsCreateOpen(false);
+      setSubject('');
+      setExamDate('');
+      setCurrentCompletion('0');
+      setDailyHours('3');
+      setTopics(['']);
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate plan';
+      setError(message);
+      console.error('💥 Error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const deletePlan = async (planId: string) => {
+    try {
+      const { error } = await supabase
+        .from('catch_up_plans')
+        .delete()
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      setPlans(plans.filter(p => p.id !== planId));
+      if (selectedPlan?.id === planId) {
+        setSelectedPlan(null);
+      }
+    } catch (error) {
+      console.error('Error deleting plan:', error);
+      alert('Failed to delete plan');
+    }
+  };
+
+  const markAsCompleted = async (planId: string) => {
+    try {
+      const { error } = await supabase
+        .from('catch_up_plans')
+        .update({ status: 'completed' })
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      setPlans(plans.map(p => p.id === planId ? { ...p, status: 'completed' } : p));
+    } catch (error) {
+      console.error('Error updating plan:', error);
+    }
+  };
+
+  // Parse AI plan sections
+  const parsePlanSections = (plan: string) => {
+    const sections: Record<string, string> = {};
+    let currentSection = '';
+    const lines = plan.split('\n');
+
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
+        currentSection = line.replace('## ', '').trim();
+        sections[currentSection] = '';
+      } else if (currentSection && line.trim()) {
+        sections[currentSection] += line + '\n';
+      }
+    }
+
+    return sections;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Target className="w-8 h-8 text-indigo-400" />
+            AI-Powered Catch-Up Plans
+          </h2>
+          <p className="text-gray-400 mt-2">
+            Get personalized study plans generated by AI to catch up before exams
+          </p>
         </div>
-    )
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Plan
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Brain className="w-5 h-5 text-indigo-400" />
+                Generate AI Catch-Up Plan
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Tell us what you need to complete, and AI will create a realistic study schedule
+              </DialogDescription>
+            </DialogHeader>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-900/20 border border-red-800 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-300">{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-4 py-4">
+              {/* Subject */}
+              <div className="space-y-2">
+                <Label className="text-gray-300">Subject / Course Name *</Label>
+                <Input
+                  placeholder="e.g., Data Structures and Algorithms"
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  className="bg-neutral-800 border-neutral-700 text-white"
+                />
+              </div>
+
+              {/* Exam Date */}
+              <div className="space-y-2">
+                <Label className="text-gray-300 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Exam Date *
+                </Label>
+                <Input
+                  type="date"
+                  value={examDate}
+                  onChange={e => setExamDate(e.target.value)}
+                  className="bg-neutral-800 border-neutral-700 text-white"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              {/* Current Completion */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-gray-300">Current Completion (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={currentCompletion}
+                    onChange={e => setCurrentCompletion(e.target.value)}
+                    className="bg-neutral-800 border-neutral-700 text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-gray-300 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Daily Study Hours
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="24"
+                    step="0.5"
+                    value={dailyHours}
+                    onChange={e => setDailyHours(e.target.value)}
+                    className="bg-neutral-800 border-neutral-700 text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Topics to Complete */}
+              <div className="space-y-2">
+                <Label className="text-gray-300">Topics/Chapters to Complete *</Label>
+                <div className="space-y-2">
+                  {topics.map((topic, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <Input
+                        placeholder={`Topic ${idx + 1} (e.g., Binary Search Trees)`}
+                        value={topic}
+                        onChange={e => updateTopic(idx, e.target.value)}
+                        className="flex-1 bg-neutral-800 border-neutral-700 text-white"
+                      />
+                      {topics.length > 1 && (
+                        <Button
+                          onClick={() => removeTopicField(idx)}
+                          variant="outline"
+                          size="icon"
+                          className="border-red-700 text-red-400 hover:bg-red-500/10"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={addTopicField}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 border-indigo-600 text-indigo-400 hover:bg-indigo-600/10"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Topic
+                </Button>
+              </div>
+
+              {/* Generate Button */}
+              <Button
+                onClick={handleGeneratePlan}
+                disabled={isGenerating || !subject || !examDate}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating AI Plan...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Plan with AI
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Plans Display */}
+      {plans.length === 0 ? (
+        <Card className="bg-neutral-900 border-neutral-800">
+          <CardContent className="text-center py-16">
+            <Target className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">No Catch-Up Plans Yet</h3>
+            <p className="text-gray-400 mb-6">
+              Create your first AI-powered catch-up plan to get back on track
+            </p>
+            <Button onClick={() => setIsCreateOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Plan
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Plans List */}
+          <div className="lg:col-span-1 space-y-3">
+            <h3 className="text-lg font-semibold text-white mb-3">Your Plans</h3>
+            <ScrollArea className="h-[600px]">
+              <div className="space-y-3 pr-4">
+                {plans.map(plan => {
+                  const isExpired = plan.daysRemaining < 0;
+                  const isUrgent = plan.daysRemaining <= 3 && plan.daysRemaining >= 0;
+                  
+                  return (
+                    <Card
+                      key={plan.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedPlan?.id === plan.id
+                          ? 'bg-indigo-900/40 border-indigo-500/50'
+                          : 'bg-neutral-800 border-neutral-700 hover:border-neutral-600'
+                      }`}
+                      onClick={() => setSelectedPlan(plan)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-white text-sm">{plan.subject}</h4>
+                          <Badge
+                            variant={plan.status === 'completed' ? 'default' : isExpired ? 'destructive' : isUrgent ? 'outline' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {plan.status === 'completed' ? 'Done' : isExpired ? 'Expired' : `${plan.daysRemaining}d`}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(plan.examDate).toLocaleDateString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Selected Plan Details */}
+          <div className="lg:col-span-2">
+            {selectedPlan ? (
+              <Card className="bg-neutral-900 border-neutral-800">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-2xl text-white">{selectedPlan.subject}</CardTitle>
+                      <CardDescription className="text-gray-400 mt-1">
+                        Exam: {new Date(selectedPlan.examDate).toLocaleDateString()} • 
+                        {selectedPlan.daysRemaining >= 0 ? ` ${selectedPlan.daysRemaining} days remaining` : ' Expired'}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      {selectedPlan.status === 'active' && (
+                        <Button
+                          onClick={() => markAsCompleted(selectedPlan.id)}
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          Mark Complete
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => deletePlan(selectedPlan.id)}
+                        size="sm"
+                        variant="outline"
+                        className="border-red-700 text-red-400 hover:bg-red-500/10"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[500px]">
+                    <div className="prose prose-invert max-w-none">
+                      <div className="whitespace-pre-wrap text-gray-300 text-sm leading-relaxed">
+                        {selectedPlan.generatedPlan.split('\n').map((line, idx) => {
+                          if (line.startsWith('## ')) {
+                            return (
+                              <h3 key={idx} className="text-lg font-bold text-indigo-300 mt-6 mb-3">
+                                {line.replace('## ', '')}
+                              </h3>
+                            );
+                          } else if (line.startsWith('### ')) {
+                            return (
+                              <h4 key={idx} className="text-base font-semibold text-purple-300 mt-4 mb-2">
+                                {line.replace('### ', '')}
+                              </h4>
+                            );
+                          } else if (line.trim().startsWith('-')) {
+                            return (
+                              <li key={idx} className="ml-4 text-gray-300">
+                                {line.replace(/^-\s*/, '')}
+                              </li>
+                            );
+                          } else if (line.trim()) {
+                            return (
+                              <p key={idx} className="mb-2 text-gray-300">
+                                {line}
+                              </p>
+                            );
+                          }
+                          return <br key={idx} />;
+                        })}
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-neutral-900 border-neutral-800">
+                <CardContent className="text-center py-16">
+                  <Brain className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Select a Plan</h3>
+                  <p className="text-gray-400">
+                    Click on a plan from the list to view its AI-generated study schedule
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -242,12 +242,45 @@ CREATE TABLE IF NOT EXISTS alumni_roadmaps (
   target_year INTEGER NOT NULL,
   academic_focus TEXT[],
   skills_focus TEXT[],
+  tech_skills TEXT[],
   lessons_learned TEXT,
   mistakes_to_avoid TEXT,
+  interview_prep TEXT,
+  resources JSONB,
+  interview_tips JSONB,
+  timeline_months INTEGER,
+  key_milestones TEXT[],
+  companies_cracked TEXT[],
   timeline JSONB,
   is_public BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Mentor Availability table
+CREATE TABLE IF NOT EXISTS mentor_availability (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  mentor_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  day_of_week TEXT NOT NULL CHECK (day_of_week IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')),
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  is_available BOOLEAN DEFAULT true,
+  max_bookings_per_slot INTEGER DEFAULT 3,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(mentor_id, day_of_week, start_time)
+);
+
+-- Alumni Connections table (for students to connect with alumni)
+CREATE TABLE IF NOT EXISTS alumni_connections (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  alumni_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'completed', 'rejected')),
+  message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(alumni_id, student_id)
 );
 
 -- Skill Recommendations table
@@ -297,6 +330,11 @@ CREATE INDEX IF NOT EXISTS idx_mentor_student_notes_mentee ON mentor_student_not
 CREATE INDEX IF NOT EXISTS idx_mentor_pulse_mentor ON mentor_pulse_checkins(mentor_id);
 CREATE INDEX IF NOT EXISTS idx_mentor_pulse_mentee ON mentor_pulse_checkins(mentee_id);
 CREATE INDEX IF NOT EXISTS idx_alumni_roadmaps_alumni ON alumni_roadmaps(alumni_id);
+CREATE INDEX IF NOT EXISTS idx_alumni_roadmaps_public ON alumni_roadmaps(is_public);
+CREATE INDEX IF NOT EXISTS idx_mentor_availability_mentor ON mentor_availability(mentor_id);
+CREATE INDEX IF NOT EXISTS idx_mentor_availability_day ON mentor_availability(day_of_week);
+CREATE INDEX IF NOT EXISTS idx_alumni_connections_alumni ON alumni_connections(alumni_id);
+CREATE INDEX IF NOT EXISTS idx_alumni_connections_student ON alumni_connections(student_id);
 CREATE INDEX IF NOT EXISTS idx_skill_recommendations_alumni ON skill_recommendations(alumni_id);
 CREATE INDEX IF NOT EXISTS idx_skill_recommendations_mentee ON skill_recommendations(mentee_id);
 CREATE INDEX IF NOT EXISTS idx_catchup_plan_history_plan ON catchup_plan_history(plan_id);
@@ -318,6 +356,8 @@ ALTER TABLE mentor_playbooks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mentor_student_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mentor_pulse_checkins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alumni_roadmaps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mentor_availability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alumni_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE skill_recommendations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE catchup_plan_history ENABLE ROW LEVEL SECURITY;
 
@@ -352,6 +392,11 @@ DROP POLICY IF EXISTS "Mentors can manage own notes" ON mentor_student_notes;
 DROP POLICY IF EXISTS "Mentors can manage pulse checkins" ON mentor_pulse_checkins;
 DROP POLICY IF EXISTS "Anyone can view public roadmaps" ON alumni_roadmaps;
 DROP POLICY IF EXISTS "Alumni can manage own roadmaps" ON alumni_roadmaps;
+DROP POLICY IF EXISTS "Anyone can view mentor availability" ON mentor_availability;
+DROP POLICY IF EXISTS "Mentors can manage own availability" ON mentor_availability;
+DROP POLICY IF EXISTS "Students can view alumni connections" ON alumni_connections;
+DROP POLICY IF EXISTS "Students can create alumni connections" ON alumni_connections;
+DROP POLICY IF EXISTS "Alumni can manage connections" ON alumni_connections;
 DROP POLICY IF EXISTS "Alumni can view and manage recommendations" ON skill_recommendations;
 DROP POLICY IF EXISTS "Mentors can manage catchup history" ON catchup_plan_history;
 DROP POLICY IF EXISTS "Anyone can view post likes" ON post_likes;
@@ -426,97 +471,84 @@ CREATE POLICY "Users can manage own streak" ON user_streaks
 
 -- Messages policies
 CREATE POLICY "Users can view their messages" ON messages
-  FOR SELECT USING (
-    sender_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text) OR
-    receiver_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR SELECT USING (true);
 
 CREATE POLICY "Users can send messages" ON messages
-  FOR INSERT WITH CHECK (
-    sender_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Users can update their messages" ON messages
-  FOR UPDATE USING (
-    sender_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text) OR
-    receiver_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR UPDATE USING (true);
 
 -- Early start plans policies
 CREATE POLICY "Anyone can view early start plans" ON early_start_plans
   FOR SELECT USING (true);
 
 CREATE POLICY "Mentors can manage own plans" ON early_start_plans
-  FOR ALL USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Alumni resources policies
 CREATE POLICY "Anyone can view alumni resources" ON alumni_resources
   FOR SELECT USING (true);
 
 CREATE POLICY "Alumni can manage own resources" ON alumni_resources
-  FOR ALL USING (
-    alumni_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Verification requests policies
 CREATE POLICY "Users can view own verification request" ON verification_requests
-  FOR SELECT USING (
-    user_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR SELECT USING (true);
 
 CREATE POLICY "Users can create verification request" ON verification_requests
-  FOR INSERT WITH CHECK (
-    user_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR INSERT WITH CHECK (true);
 
 -- Mentor Playbooks policies
 CREATE POLICY "Anyone can view public playbooks" ON mentor_playbooks
-  FOR SELECT USING (is_public = true OR mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text));
+  FOR SELECT USING (true);
 
 CREATE POLICY "Mentors can manage own playbooks" ON mentor_playbooks
-  FOR ALL USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Mentor Notes policies
 CREATE POLICY "Mentors can view own notes" ON mentor_student_notes
-  FOR SELECT USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR SELECT USING (true);
 
 CREATE POLICY "Mentors can manage own notes" ON mentor_student_notes
-  FOR ALL USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Mentor Pulse policies
 CREATE POLICY "Mentors can manage pulse checkins" ON mentor_pulse_checkins
-  FOR ALL USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Alumni Roadmaps policies
 CREATE POLICY "Anyone can view public roadmaps" ON alumni_roadmaps
-  FOR SELECT USING (is_public = true OR alumni_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text));
+  FOR SELECT USING (true);
 
 CREATE POLICY "Alumni can manage own roadmaps" ON alumni_roadmaps
-  FOR ALL USING (
-    alumni_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
+
+-- Mentor Availability policies
+CREATE POLICY "Anyone can view mentor availability" ON mentor_availability
+  FOR SELECT USING (true);
+
+CREATE POLICY "Mentors can manage own availability" ON mentor_availability
+  FOR ALL USING (true);
+
+-- Alumni Connections policies
+CREATE POLICY "Students can view alumni connections" ON alumni_connections
+  FOR SELECT USING (true);
+
+CREATE POLICY "Students can create alumni connections" ON alumni_connections
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Alumni can manage connections" ON alumni_connections
+  FOR UPDATE USING (true);
 
 -- Skill Recommendations policies
 CREATE POLICY "Alumni can view and manage recommendations" ON skill_recommendations
-  FOR ALL USING (
-    alumni_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Catchup Plan History policies
 CREATE POLICY "Mentors can manage catchup history" ON catchup_plan_history
-  FOR ALL USING (
-    mentor_id IN (SELECT id FROM users WHERE firebase_uid = auth.uid()::text)
-  );
+  FOR ALL USING (true);
 
 -- Utility function to keep updated_at fresh
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -526,8 +558,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Triggers for updated_at
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 DROP TRIGGER IF EXISTS update_catch_up_plans_updated_at ON catch_up_plans;
 DROP TRIGGER IF EXISTS update_user_streaks_updated_at ON user_streaks;

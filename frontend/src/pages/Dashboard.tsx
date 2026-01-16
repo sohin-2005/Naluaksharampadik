@@ -23,6 +23,9 @@ import CompareYearView from '../components/alumni/CompareYearView';
 import SkillDriftIndicator from '../components/alumni/SkillDriftIndicator';
 import LongTermGrowthTracker from '../components/alumni/LongTermGrowthTracker';
 import { StudentInsightsPanel } from '../components/student/StudentInsightsPanel';
+import AvailableMentorsPanel from '../components/student/AvailableMentorsPanel';
+import AlumniRoadmapsExplorer from '../components/student/AlumniRoadmapsExplorer';
+import ConnectionRequestsPanel from '../components/mentor/ConnectionRequestsPanel';
 
 export default function Dashboard() {
   const { logout, userProfile } = useAuth();
@@ -52,12 +55,25 @@ export default function Dashboard() {
 
   const fetchMentorStats = async () => {
     try {
-      // Count incoming mentorship requests
-      const { count: requestsCount } = await supabase
-        .from('mentorship_connections')
-        .select('*', { count: 'exact', head: true })
-        .eq(userProfile?.role === 'mentor' ? 'mentor_id' : 'alumni_id', userProfile?.id)
-        .eq('status', 'pending');
+      let requestsCount = 0;
+
+      if (userProfile?.role === 'mentor') {
+        // Count mentor connection requests
+        const { count } = await supabase
+          .from('mentorship_connections')
+          .select('*', { count: 'exact', head: true })
+          .eq('mentor_id', userProfile?.id)
+          .eq('status', 'pending');
+        requestsCount = count || 0;
+      } else if (userProfile?.role === 'alumni') {
+        // Count alumni connection requests
+        const { count } = await supabase
+          .from('alumni_connections')
+          .select('*', { count: 'exact', head: true })
+          .eq('alumni_id', userProfile?.id)
+          .eq('status', 'pending');
+        requestsCount = count || 0;
+      }
 
       // Count unread messages
       const { count: messagesCount } = await supabase
@@ -68,7 +84,7 @@ export default function Dashboard() {
 
       setStats(prev => ({
         ...prev,
-        incomingRequests: requestsCount || 0,
+        incomingRequests: requestsCount,
         unreadMessages: messagesCount || 0,
       }));
     } catch (error) {
@@ -260,10 +276,14 @@ export default function Dashboard() {
 
             {/* Student Tabs */}
             <Tabs defaultValue="mentorship" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-6 h-auto p-1 bg-neutral-900 border border-neutral-800 shadow-sm rounded-lg">
+              <TabsList className="grid w-full grid-cols-7 h-auto p-1 bg-neutral-900 border border-neutral-800 shadow-sm rounded-lg">
                 <TabsTrigger value="mentorship" className="flex items-center gap-2 py-3 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-200">
                   <Users className="size-4" />
-                  <span className="hidden sm:inline">Mentorship</span>
+                  <span className="hidden sm:inline">Mentors</span>
+                </TabsTrigger>
+                <TabsTrigger value="roadmaps" className="flex items-center gap-2 py-3 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-200">
+                  <BookMarked className="size-4" />
+                  <span className="hidden sm:inline">Roadmaps</span>
                 </TabsTrigger>
                 <TabsTrigger value="study-log" className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-200">
                   <TrendingUp className="size-4" />
@@ -288,7 +308,14 @@ export default function Dashboard() {
               </TabsList>
 
               <TabsContent value="mentorship" className="mt-6">
-                <MentorshipTab userRole={userProfile.role} />
+                <div className="space-y-6">
+                  <AvailableMentorsPanel />
+                  <MentorshipTab userRole={userProfile.role} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="roadmaps" className="mt-6">
+                <AlumniRoadmapsExplorer />
               </TabsContent>
 
               <TabsContent value="study-log" className="mt-6">
@@ -346,7 +373,7 @@ export default function Dashboard() {
 
             {/* Mentor/Alumni Tabs */}
             <Tabs defaultValue={userProfile.role === 'mentor' ? 'dashboard' : 'alumni-dashboard'} className="space-y-6">
-              <TabsList className={`grid w-full ${userProfile.role === 'mentor' ? 'grid-cols-6' : 'grid-cols-5'} h-auto p-1 bg-neutral-900 border border-neutral-800 shadow-sm rounded-lg`}>
+              <TabsList className={`grid w-full ${userProfile.role === 'mentor' ? 'grid-cols-6' : 'grid-cols-6'} h-auto p-1 bg-neutral-900 border border-neutral-800 shadow-sm rounded-lg`}>
                 {userProfile.role === 'mentor' ? (
                   <>
                     <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-200">
@@ -379,6 +406,10 @@ export default function Dashboard() {
                     <TabsTrigger value="alumni-dashboard" className="flex items-center gap-2 py-3 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-200">
                       <BarChart3 className="size-4" />
                       <span className="hidden sm:inline text-xs">Dashboard</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="connections" className="flex items-center gap-2 py-3 data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-200">
+                      <Users className="size-4" />
+                      <span className="hidden sm:inline text-xs">Requests</span>
                     </TabsTrigger>
                     <TabsTrigger value="roadmap" className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-200">
                       <BookMarked className="size-4" />
@@ -417,7 +448,7 @@ export default function Dashboard() {
                   </TabsContent>
 
                   <TabsContent value="mentorship" className="mt-6">
-                    <MentorshipTab userRole={userProfile.role} />
+                    <ConnectionRequestsPanel />
                   </TabsContent>
 
                   <TabsContent value="playbooks" className="mt-6">
@@ -439,12 +470,17 @@ export default function Dashboard() {
                 <>
                   <TabsContent value="alumni-dashboard" className="mt-6">
                     <div className="space-y-6">
+                      <ConnectionRequestsPanel />
                       <RoadmapVault />
                       <div className="grid grid-cols-2 gap-6">
                         <CompareYearView />
                         <LongTermGrowthTracker />
                       </div>
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="connections" className="mt-6">
+                    <ConnectionRequestsPanel />
                   </TabsContent>
 
                   <TabsContent value="roadmap" className="mt-6">
