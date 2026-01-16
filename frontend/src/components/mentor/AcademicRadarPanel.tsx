@@ -49,20 +49,29 @@ export default function AcademicRadarPanel() {
 
       // Get study logs for each student to determine status
       const studentPromises = connections.map(async (conn: any) => {
-        const { data: logs } = await supabase
+        const { data: logs, error: logsError } = await supabase
           .from('study_logs')
-          .select('*')
+          .select('id, date, created_at, duration_minutes')
           .eq('user_id', conn.mentee_id)
           .order('date', { ascending: false })
           .limit(7);
 
-        const { data: streak } = await supabase
+        if (logsError) {
+          console.error(`Error fetching logs for ${conn.mentee_id}:`, logsError);
+        }
+
+        const { data: streak, error: streakError } = await supabase
           .from('user_streaks')
           .select('current_streak')
           .eq('user_id', conn.mentee_id)
           .single();
 
+        if (streakError && streakError.code !== 'PGRST116') {
+          console.error(`Error fetching streak for ${conn.mentee_id}:`, streakError);
+        }
+
         const recentLogsCount = logs?.length || 0;
+        const lastLogDate = logs && logs.length > 0 ? logs[0].date || logs[0].created_at : null;
         let status: 'stable' | 'attention' | 'critical' = 'stable';
 
         if (recentLogsCount === 0) {
@@ -75,7 +84,7 @@ export default function AcademicRadarPanel() {
           id: conn.mentee_id,
           name: conn.mentee?.full_name || 'Unknown',
           status,
-          lastUpdate: logs?.[0]?.date || 'N/A',
+          lastUpdate: lastLogDate || 'N/A',
           currentStreak: streak?.current_streak || 0,
           recentLogs: recentLogsCount
         };

@@ -4,10 +4,11 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { AlertCircle, Clock, Heart, MessageCircle, Moon, TrendingUp, Users } from 'lucide-react';
+import { AlertCircle, Clock, Heart, MessageCircle, TrendingUp, Users } from 'lucide-react';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
+import { MyStudyPattern } from './MyStudyPattern';
 
 interface Message {
   id: string;
@@ -49,10 +50,8 @@ export function StudentInsightsPanel() {
   const { userProfile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
-  const [patterns, setPatterns] = useState<PatternInsight[]>([]);
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({ status: 'stable', streak: 0, recentLogs: 0, message: 'Loading...' });
   const [mentorInfo, setMentorInfo] = useState<MentorInfo | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userProfile?.id) return;
@@ -60,7 +59,6 @@ export function StudentInsightsPanel() {
   }, [userProfile?.id]);
 
   const fetchAllData = async () => {
-    setLoading(true);
     try {
       await Promise.all([
         fetchMessages(),
@@ -69,8 +67,8 @@ export function StudentInsightsPanel() {
         calculateHealthStatus(),
         fetchMentorInfo()
       ]);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Fetch error:', err);
     }
   };
 
@@ -164,11 +162,7 @@ export function StudentInsightsPanel() {
         .limit(60);
 
       if (!logs || logs.length === 0) {
-        setPatterns([{
-          label: 'Getting Started',
-          message: 'No study patterns yet. Start logging your sessions to get personalized insights.',
-          tone: 'watch'
-        }]);
+        // No patterns to analyze
         return;
       }
 
@@ -224,7 +218,7 @@ export function StudentInsightsPanel() {
         });
       }
 
-      setPatterns(insights);
+      // Insights analyzed but not displayed in UI
     } catch (err) {
       console.error('Error analyzing patterns:', err);
     }
@@ -284,12 +278,12 @@ export function StudentInsightsPanel() {
         .single();
 
       if (data?.mentor && !Array.isArray(data.mentor)) {
-        const mentorId = data.mentor.id;
-        const saved = localStorage.getItem(`mentor_availability_${mentorId}`);
+        const mentor = data.mentor as { id: string; full_name: string };
+        const saved = localStorage.getItem(`mentor_availability_${mentor.id}`);
         const availability = saved ? JSON.parse(saved) : null;
 
         setMentorInfo({
-          name: data.mentor.full_name,
+          name: mentor.full_name,
           availability: availability?.window,
           capacity: availability?.capacity
         });
@@ -452,30 +446,7 @@ export function StudentInsightsPanel() {
         </TabsContent>
 
         <TabsContent value="patterns">
-          <Card className="bg-neutral-900 border border-neutral-800">
-            <CardHeader>
-              <CardTitle className="text-lg text-white flex items-center gap-2">
-                <Moon className="w-5 h-5 text-indigo-300" />
-                Your Study Pattern Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {patterns.map((insight) => (
-                <div
-                  key={insight.label}
-                  className={cn(
-                    'p-4 rounded-lg border',
-                    insight.tone === 'positive' && 'bg-emerald-500/10 border-emerald-500/30',
-                    insight.tone === 'watch' && 'bg-amber-500/10 border-amber-500/30',
-                    insight.tone === 'risk' && 'bg-red-500/10 border-red-500/30'
-                  )}
-                >
-                  <p className="text-sm font-semibold text-white mb-1">{insight.label}</p>
-                  <p className="text-xs text-gray-300">{insight.message}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <MyStudyPattern />
         </TabsContent>
 
         {mentorInfo && (

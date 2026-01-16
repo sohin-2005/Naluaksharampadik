@@ -7,7 +7,8 @@ export const API_ENDPOINTS = {
 };
 
 // Helper function to call SemSense AI
-export async function callSemSenseAI(semesterData: {
+export async function callSemSenseAI(
+  semesterData: {
   semesterNumber: number;
   studentName?: string;
   subjects: Array<{
@@ -18,16 +19,38 @@ export async function callSemSenseAI(semesterData: {
   weeklyAvailableHours: number;
   studentInterests?: string[];
   academicCalendar?: Record<string, any>;
-}) {
+},
+  timetableFile?: File | null
+) {
   try {
     console.log('📨 Calling SemSense AI endpoint...');
-    const response = await fetch(API_ENDPOINTS.SEMSENSE_AI, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(semesterData)
-    });
+    let response: Response;
+
+    if (timetableFile) {
+      // Send multipart/form-data when a PDF is included
+      const form = new FormData();
+      form.append('semesterNumber', String(semesterData.semesterNumber));
+      if (semesterData.studentName) form.append('studentName', semesterData.studentName);
+      form.append('subjects', JSON.stringify(semesterData.subjects));
+      form.append('weeklyAvailableHours', String(semesterData.weeklyAvailableHours));
+      if (semesterData.studentInterests) form.append('studentInterests', JSON.stringify(semesterData.studentInterests));
+      if (semesterData.academicCalendar) form.append('academicCalendar', JSON.stringify(semesterData.academicCalendar));
+      form.append('timetable', timetableFile);
+
+      response = await fetch(API_ENDPOINTS.SEMSENSE_AI, {
+        method: 'POST',
+        body: form
+      });
+    } else {
+      // Default to JSON payload when no file is provided
+      response = await fetch(API_ENDPOINTS.SEMSENSE_AI, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(semesterData)
+      });
+    }
 
     if (!response.ok) {
       const errorData = await response.json();

@@ -2,12 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import Groq from 'groq-sdk';
+import multer from 'multer';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
+
+// File upload (PDF) - memory storage
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Middleware
 app.use(cors({
@@ -29,10 +34,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Backend is running', timestamp: new Date().toISOString() });
 });
 
-// SemSense AI endpoint
-app.post('/api/semsense-ai', async (req, res) => {
+// SemSense AI endpoint (supports optional timetable PDF upload)
+app.post('/api/semsense-ai', upload.single('timetable'), async (req, res) => {
   try {
-    const {
+    console.log('📥 Incoming SemSense AI request', {
+      contentType: req.headers['content-type'],
+      hasFile: !!req.file,
+      bodyKeys: Object.keys(req.body || {})
+    });
+    // Handle both JSON and multipart/form-data payloads
+    // When multipart, complex fields arrive as strings; parse if necessary
+    let {
       semesterNumber,
       subjects,
       weeklyAvailableHours,
@@ -41,8 +53,29 @@ app.post('/api/semsense-ai', async (req, res) => {
       studentName = 'Student'
     } = req.body;
 
-    // Validate required fields
-    if (!semesterNumber || !subjects || !weeklyAvailableHours) {
+    if (typeof subjects === 'string') {
+      try { subjects = JSON.parse(subjects); } catch {}
+    }
+    if (typeof studentInterests === 'string') {
+      try { studentInterests = JSON.parse(studentInterests); } catch {}
+    }
+    if (typeof academicCalendar === 'string') {
+      try { academicCalendar = JSON.parse(academicCalendar); } catch {}
+    }
+    if (typeof semesterNumber === 'string') semesterNumber = parseInt(semesterNumber, 10);
+    if (typeof weeklyAvailableHours === 'string') weeklyAvailableHours = parseInt(weeklyAvailableHours, 10);
+
+    const isValidSemester = Number.isFinite(semesterNumber) && semesterNumber > 0;
+    const isValidWeeklyHours = Number.isFinite(weeklyAvailableHours) && weeklyAvailableHours > 0;
+    const isValidSubjects = Array.isArray(subjects) && subjects.length > 0;
+
+    if (!isValidSemester || !isValidSubjects || !isValidWeeklyHours) {
+      console.warn('⚠️  Validation failed', {
+        semesterNumber,
+        weeklyAvailableHours,
+        subjectsType: typeof subjects,
+        subjectsLength: Array.isArray(subjects) ? subjects.length : 'n/a'
+      });
       return res.status(400).json({
         error: 'Missing required fields: semesterNumber, subjects, weeklyAvailableHours'
       });
@@ -55,70 +88,100 @@ app.post('/api/semsense-ai', async (req, res) => {
       });
     }
 
+    // Extract PDF timetable text if uploaded
+    let timetableText = '';
+    if (req.file && req.file.buffer) {
+      try {
+        const parsed = await pdfParse(req.file.buffer);
+        timetableText = parsed?.text || '';
+      } catch (pdfErr) {
+        console.warn('⚠️  Failed to parse uploaded PDF:', pdfErr?.message || pdfErr);
+      }
+    }
+
     // Build the prompt for Gemini
     const subjectsList = subjects
       .map(s => `- ${s.name} (${s.credits} credits, Difficulty: ${s.difficulty})`)
       .join('\n');
 
-    const interestsList = studentInterests
+    const interestsList = studentInterests && Array.isArray(studentInterests)
       ? `Student interests: ${studentInterests.join(', ')}`
       : 'Student interests: Not provided';
 
     const calendarInfo = academicCalendar
-      ? `KTU Academic Calendar: ${JSON.stringify(academicCalendar)}`
-      : 'No calendar provided';
+      ? `Provided Academic Calendar (manual): ${JSON.stringify(academicCalendar)}`
+      : 'No manual calendar provided';
 
-    const prompt = `
-You are an expert academic advisor helping a student plan their semester intelligently.
+    const timetableInfo = timetableText
+      ? `
+UNIVERSITY SEMESTER TIMETABLE (PDF EXTRACT):
+${timetableText.substring(0, 15000)}
+      `
+      : '\nNo PDF timetable uploaded.\n';
 
-STUDENT PROFILE:
-- Name: ${studentName}
-- Semester: ${semesterNumber}
-- Weekly Available Study Hours: ${weeklyAvailableHours} hours
-- ${interestsList}
+     const prompt = `
+  You are an expert academic advisor helping a student plan their semester intelligently.
 
-SUBJECTS THIS SEMESTER:
-${subjectsList}
+  STUDENT PROFILE:
+  - Name: ${studentName}
+  - Semester: ${semesterNumber}
+  - Weekly Available Study Hours: ${weeklyAvailableHours} hours
+  - ${interestsList}
 
-${calendarInfo}
+  SUBJECTS THIS SEMESTER:
+  ${subjectsList}
 
-TASK:
-Analyze this semester data and provide:
+  ${calendarInfo}
+  ${timetableInfo}
 
-1. WORKLOAD ANALYSIS:
-   - Overall difficulty level (Low/Medium/High)
-   - Identifying high-risk periods (exam clusters, heavy weeks)
-   - Realistic time allocation per subject per week
+  TASK:
+  Analyze this semester using the provided timetable (if any) and produce holiday-aware guidance. Do ALL of the following:
 
-2. WEEKLY ACADEMIC PLAN:
-   - Create a 16-week semester plan with:
-     - Recommended study hours per subject per week
-     - Key revision milestones
-     - Built-in buffer weeks for exams
+  1) TIMETABLE UNDERSTANDING
+    - Identify semester duration (start/end), exam periods, short breaks (<=3 days), medium breaks (4-7 days), long breaks (>7 days), and light academic weeks.
 
-3. PROJECT & UPSKILLING SUGGESTIONS:
-   - Suggest 2-3 project ideas aligned with current subjects and industry trends
-   - Recommend 1-2 key skills to focus on this semester
-   - Clearly mark which are "Must-do" vs "Optional if time permits"
+  2) WORKLOAD ANALYSIS
+    - Overall difficulty (Low/Medium/High) and realistic weekly time per subject.
+    - Flag high-risk periods (exam clusters, heavy weeks).
 
-4. EMERGING TRENDS PANEL:
-   - Show 2-3 engineering trends relevant to the student's branch
-   - Explain why each matters in simple language
+  3) HOLIDAY-AWARE ROADMAP
+    - Build a semester roadmap highlighting: academic focus weeks and holiday opportunity windows.
+    - For each holiday window: classify as Mini (short), Intermediate (medium), or Flagship (long) and give 1-2 realistic project ideas with expected outcomes.
 
-5. REST & RECOVERY:
-   - Identify light weeks suitable for projects
-   - Suggest optimal times for upskilling
-   - Highlight risk of burnout and how to avoid it
+  4) PROJECT & SKILL RECOMMENDATIONS (TREND-AWARE)
+    - Match to subjects and interests; consider current engineering trends.
+    - Recommend exactly 1 primary skill and 1 supporting skill for the semester (practical, achievable).
 
-IMPORTANT:
-- Be supportive and realistic, not overwhelming
-- Prioritize clarity over quantity
-- Keep all suggestions semester-bound
-- Format response in clear sections with bullet points
-- Provide actionable, specific guidance
+  5) REVISION & UPSKILLING WINDOWS
+    - Detect weeks suitable for revision and upskilling (avoid heavy exam weeks).
 
-START RESPONSE NOW:
-`;
+  BEHAVIOR RULES
+  - Do not overload the student. Keep suggestions semester-bound and sustainable.
+  - Use calm, supportive tone; avoid competition language.
+  - No chatty conversation—return clear sections with bullet points and short paragraphs.
+
+  FORMAT STRICTLY AS:
+  ## Semester Timeline Summary
+  ... (duration, exams, light weeks)
+
+  ## Holiday Windows (Classified)
+  - Window 1 (type, dates): ...
+    - Project idea(s): ...
+    - Expected outcomes: ...
+
+  ## Weekly Study Plan (16 weeks)
+  - Week 1-2: ...
+
+  ## Skills (Primary + Supporting)
+  - Primary: ... | Why now: ...
+  - Supporting: ... | Why now: ...
+
+  ## Trends To Watch
+  - Trend: ... | Relevance: ...
+
+  ## Notes (Balance & Recovery)
+  - ...
+  `;
 
     console.log('📨 Sending prompt to Groq...');
     console.log('Semester:', semesterNumber, '| Subjects:', subjects.length, '| Available Hours:', weeklyAvailableHours);

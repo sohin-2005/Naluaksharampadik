@@ -78,12 +78,15 @@ export default function StudentTimelineView() {
       // Fetch study logs
       const { data: logs, error: logsError } = await supabase
         .from('study_logs')
-        .select('*')
+        .select('id, user_id, topic, notes, duration_minutes, date, created_at')
         .eq('user_id', studentId)
-        .order('created_at', { ascending: false })
+        .order('date', { ascending: false })
         .limit(50);
 
-      if (logsError) throw logsError;
+      if (logsError) {
+        console.error('Error fetching study logs:', logsError);
+        // Continue with empty logs instead of throwing
+      }
 
       // Fetch mentor notes
       const { data: notes, error: notesError } = await supabase
@@ -111,10 +114,10 @@ export default function StudentTimelineView() {
       logs?.forEach((log: any) => {
         events.push({
           id: log.id,
-          date: log.created_at,
+          date: log.date || log.created_at,
           type: 'study_log',
           title: `${log.topic || 'Study Session'}`,
-          description: log.notes || '',
+          description: log.notes || `Duration: ${log.duration_minutes || 0} minutes`,
           duration: log.duration_minutes,
           icon: '📚'
         });

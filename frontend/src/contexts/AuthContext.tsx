@@ -34,7 +34,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
+    // Perform login, then update daily streak
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    try {
+      // Ensure we have latest profile
+      const profile = await fetchUserProfile(cred.user.uid);
+      // Update streak if profile found
+      if (profile?.id) {
+        await updateDailyStreak(profile.id);
+        // Refresh context profile after update
+        await refreshUserProfile(cred.user.uid);
+      }
+    } catch (err) {
+      console.error('Streak update after login failed:', err);
+    }
+    return cred;
   };
 
   const logout = async () => {
@@ -56,6 +70,86 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error fetching user profile:', error);
       setUserProfile(null);
       return null;
+    }
+  };
+
+  // Helper: Update daily login streak stored in `user_streaks`
+  const updateDailyStreak = async (userId: string) => {
+    try {
+      // Fetch current streak record
+      const { data: streakRow, error: streakErr } = await supabase
+        .from('user_streaks')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (streakErr && streakErr.code !== 'PGRST116') { // ignore "No rows" error
+        throw streakErr;
+      }
+
+      // Compute dates in UTC date-only strings
+      const today = new Date();
+      const todayStr = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
+        .toISOString()
+        .slice(0, 10);
+
+      let current_streak = 0;
+      let longest_streak = 0;
+      let last_log_date: string | null = null;
+
+      if (!streakRow) {
+        // First-time record
+        current_streak = 1;
+        longest_streak = 1;
+        last_log_date = todayStr;
+      } else {
+        current_streak = streakRow.current_streak ?? 0;
+        longest_streak = streakRow.longest_streak ?? 0;
+        last_log_date = streakRow.last_log_date ?? null;
+
+        if (last_log_date === todayStr) {
+          // Already counted today; do nothing
+          return;
+        }
+
+        if (!last_log_date) {
+          current_streak = 1;
+          longest_streak = Math.max(longest_streak, current_streak);
+        } else {
+          const last = new Date(last_log_date + 'T00:00:00Z');
+          const diffDays = Math.floor(
+            (Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) - last.getTime()) /
+            (1000 * 60 * 60 * 24)
+          );
+
+          if (diffDays === 1) {
+            current_streak = (current_streak ?? 0) + 1;
+            longest_streak = Math.max(longest_streak ?? 0, current_streak);
+          } else {
+            // Missed days; reset streak to 1
+            current_streak = 1;
+            longest_streak = Math.max(longest_streak ?? 0, current_streak);
+          }
+        }
+
+        last_log_date = todayStr;
+      }
+
+      const payload = {
+        user_id: userId,
+        current_streak,
+        longest_streak,
+        last_log_date,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: upsertErr } = await supabase
+        .from('user_streaks')
+        .upsert(payload, { onConflict: 'user_id' });
+
+      if (upsertErr) throw upsertErr;
+    } catch (err) {
+      console.error('Failed to update daily streak:', err);
     }
   };
 

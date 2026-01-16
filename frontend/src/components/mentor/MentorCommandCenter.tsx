@@ -230,31 +230,51 @@ export function MentorCommandCenter() {
   };
 
   const sendNudge = async (menteeId: string, content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !menteeId) {
+      alert('Please select a student and provide a message');
+      return;
+    }
     setNudging(true);
     try {
-      await supabase.from('messages').insert({
+      const { error } = await supabase.from('messages').insert({
         sender_id: userProfile?.id,
         receiver_id: menteeId,
-        content,
-        read_status: false
+        content: content.trim(),
+        read_status: false,
+        created_at: new Date().toISOString()
       });
+      
+      if (error) throw error;
+      
       setCustomNudge('');
-    } catch (err) {
+      alert('Nudge sent successfully!');
+    } catch (err: any) {
       console.error('Error sending nudge', err);
+      alert(`Failed to send nudge: ${err.message || 'Unknown error'}`);
     } finally {
       setNudging(false);
     }
   };
 
   const analyzePatterns = async (menteeId: string) => {
+    if (!menteeId) {
+      setPatternInsights([{ label: 'No student selected', message: 'Select a student to analyze patterns', tone: 'watch' }]);
+      return;
+    }
+    
     try {
-      const { data: logs } = await supabase
+      const { data: logs, error } = await supabase
         .from('study_logs')
-        .select('created_at, duration_minutes')
+        .select('date, created_at, duration_minutes')
         .eq('user_id', menteeId)
-        .order('created_at', { ascending: false })
+        .order('date', { ascending: false })
         .limit(60);
+
+      if (error) {
+        console.error('Error fetching logs for pattern analysis:', error);
+        setPatternInsights([{ label: 'Error loading data', message: 'Could not fetch study logs. Please try again.', tone: 'watch' }]);
+        return;
+      }
 
       if (!logs || logs.length === 0) {
         setPatternInsights([{ label: 'No data yet', message: 'No study logs recorded. Encourage a light restart plan.', tone: 'watch' }]);
@@ -262,7 +282,9 @@ export function MentorCommandCenter() {
       }
 
       const lateNight = logs.filter((l: any) => {
-        const h = new Date(l.created_at).getHours();
+        const timestamp = l.created_at || l.date;
+        if (!timestamp) return false;
+        const h = new Date(timestamp).getHours();
         return h >= 22 || h <= 5;
       }).length;
 
@@ -271,7 +293,9 @@ export function MentorCommandCenter() {
 
       const dayBuckets: Record<string, number> = {};
       logs.forEach((l: any) => {
-        const day = new Date(l.created_at).getDay();
+        const timestamp = l.date || l.created_at;
+        if (!timestamp) return;
+        const day = new Date(timestamp).getDay();
         dayBuckets[day] = (dayBuckets[day] || 0) + 1;
       });
       const spread = Object.values(dayBuckets);
@@ -369,7 +393,9 @@ export function MentorCommandCenter() {
     }
   };
 
+  // Get selected mentee name for display
   const selectedMentee = useMemo(() => mentees.find((m) => m.id === selectedMenteeId), [mentees, selectedMenteeId]);
+  const selectedMenteeName = selectedMentee?.name || 'Select a student';
 
   return (
     <div className="space-y-6">
@@ -483,10 +509,15 @@ export function MentorCommandCenter() {
             <CardHeader>
               <CardTitle className="text-lg text-white flex items-center gap-2">
                 <Heart className="w-5 h-5 text-rose-300" />
-                One-Click Nudge
+                One-Click Nudge to {selectedMenteeName}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {!selectedMenteeId && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-amber-200">⚠️ Please select a student from the attention queue first</p>
+                </div>
+              )}
               <p className="text-sm text-gray-300">Send a supportive note without extra typing.</p>
               <div className="grid md:grid-cols-2 gap-3">
                 {nudgePresets.map((preset) => (

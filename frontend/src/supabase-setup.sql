@@ -40,11 +40,28 @@ CREATE TABLE IF NOT EXISTS study_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
+  topic TEXT,
+  duration_minutes INTEGER NOT NULL,
   hours_studied DECIMAL(4,2) NOT NULL,
   subjects TEXT[] NOT NULL,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, date)
+);
+
+-- Study patterns/preferences table
+CREATE TABLE IF NOT EXISTS study_patterns (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+  preferred_time_of_day TEXT CHECK (preferred_time_of_day IN ('morning', 'afternoon', 'evening', 'night', 'flexible')),
+  preferred_session_duration INTEGER, -- in minutes
+  focus_subjects TEXT[],
+  study_days TEXT[], -- e.g. ['monday', 'wednesday', 'friday']
+  breaks_preference TEXT, -- e.g., 'pomodoro', 'long_breaks', 'no_breaks'
+  environment_preference TEXT, -- e.g., 'quiet', 'music', 'group'
+  goals TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Catch-up plans table
