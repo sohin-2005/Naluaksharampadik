@@ -434,8 +434,9 @@ export default function MentorshipTab({ userRole }: MentorshipTabProps) {
                     {myConnections.length > 0 ? (
                         <div className="space-y-3">
                             {myConnections.map((connection) => {
-                                const isStudent = userRole === 'student';
-                                const otherPerson = isStudent ? connection.mentor : connection.mentee;
+                                // In this section, userRole is 'mentor' or 'alumni', never 'student'
+                                const isMentor = userRole === 'mentor' || userRole === 'alumni';
+                                const otherPerson = isMentor ? connection.mentee : connection.mentor;
                                 return (
                                     <Card key={connection.id} className="bg-neutral-800 border-neutral-700 p-4">
                                         <div className="flex items-center justify-between gap-4">
