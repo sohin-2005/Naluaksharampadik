@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { AlertCircle, Clock, Heart, Moon, Repeat, Send, Sparkles, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { AlertCircle, Clock, Heart, Moon, Repeat, Send, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';

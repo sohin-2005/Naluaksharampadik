@@ -283,7 +283,7 @@ export function StudentInsightsPanel() {
         .eq('status', 'active')
         .single();
 
-      if (data?.mentor) {
+      if (data?.mentor && !Array.isArray(data.mentor)) {
         const mentorId = data.mentor.id;
         const saved = localStorage.getItem(`mentor_availability_${mentorId}`);
         const availability = saved ? JSON.parse(saved) : null;

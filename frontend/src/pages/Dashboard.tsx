@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { GraduationCap, Target, Users, TrendingUp, Activity, LogOut, BarChart3, BookMarked, FolderGit2, Brain } from 'lucide-react';
+import { GraduationCap, Target, Users, TrendingUp, Activity, LogOut, BarChart3, BookMarked, FolderGit2 } from 'lucide-react';
 import MentorshipTab from '../components/MentorshipTab';
 import { StudyLogTab } from '../components/StudyLogTab';
 import { CatchUpTab } from '../components/CatchUpTab';

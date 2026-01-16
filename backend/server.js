@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 // Load environment variables
 dotenv.config();
@@ -19,8 +19,10 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Groq AI
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -46,10 +48,10 @@ app.post('/api/semsense-ai', async (req, res) => {
       });
     }
 
-    // Validate Gemini API key
-    if (!process.env.GEMINI_API_KEY) {
+    // Validate Groq API key
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({
-        error: 'Gemini API key not configured'
+        error: 'Groq API key not configured'
       });
     }
 
@@ -118,16 +120,32 @@ IMPORTANT:
 START RESPONSE NOW:
 `;
 
-    console.log('📨 Sending prompt to Gemini...');
+    console.log('📨 Sending prompt to Groq...');
     console.log('Semester:', semesterNumber, '| Subjects:', subjects.length, '| Available Hours:', weeklyAvailableHours);
 
-    // Call Gemini API
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Validate Groq API key
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({
+        error: 'Groq API key not configured'
+      });
+    }
 
-    console.log('✅ Gemini response received successfully');
+    // Call Groq API - using llama-3.3-70b-versatile (latest available model)
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_tokens: 2048
+    });
+
+    const text = completion.choices[0]?.message?.content || '';
+
+    console.log('✅ Groq response received successfully');
 
     // Return structured response
     res.json({
@@ -145,10 +163,10 @@ START RESPONSE NOW:
   } catch (error) {
     console.error('💥 Error in SemSense AI endpoint:', error.message);
 
-    // Handle specific Gemini errors
+    // Handle specific Groq errors
     if (error.message.includes('API key')) {
       return res.status(500).json({
-        error: 'Gemini API key is invalid or missing',
+        error: 'Groq API key is invalid or missing',
         details: error.message
       });
     }
@@ -182,8 +200,8 @@ app.listen(PORT, () => {
   console.log(`📝 SemSense AI endpoint: POST http://localhost:${PORT}/api/semsense-ai`);
   console.log(`🏥 Health check: GET http://localhost:${PORT}/api/health`);
   
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('⚠️  GEMINI_API_KEY not set in environment variables');
+  if (!process.env.GROQ_API_KEY) {
+    console.warn('⚠️  GROQ_API_KEY not set in environment variables');
   }
 });
 
