@@ -4,8 +4,15 @@ import dotenv from 'dotenv';
 import Groq from 'groq-sdk';
 import multer from 'multer';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load shared env from repo root (fallback to backend/.env if present)
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const app = express();
