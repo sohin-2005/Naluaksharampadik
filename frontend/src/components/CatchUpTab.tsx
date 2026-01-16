@@ -8,7 +8,6 @@ import { Target, Loader2, Calendar, Clock, AlertCircle, Brain, Plus, X, Sparkles
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { generateCatchUpPlan } from '../config/api';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
@@ -209,23 +208,23 @@ export function CatchUpTab() {
     }
   };
 
-  // Parse AI plan sections
-  const parsePlanSections = (plan: string) => {
-    const sections: Record<string, string> = {};
-    let currentSection = '';
-    const lines = plan.split('\n');
+  // Parse AI plan sections (unused for now, kept for future features)
+  // const parsePlanSections = (plan: string) => {
+  //   const sections: Record<string, string> = {};
+  //   let currentSection = '';
+  //   const lines = plan.split('\n');
 
-    for (const line of lines) {
-      if (line.startsWith('## ')) {
-        currentSection = line.replace('## ', '').trim();
-        sections[currentSection] = '';
-      } else if (currentSection && line.trim()) {
-        sections[currentSection] += line + '\n';
-      }
-    }
+  //   for (const line of lines) {
+  //     if (line.startsWith('## ')) {
+  //       currentSection = line.replace('## ', '').trim();
+  //       sections[currentSection] = '';
+  //     } else if (currentSection && line.trim()) {
+  //       sections[currentSection] += line + '\n';
+  //     }
+  //   }
 
-    return sections;
-  };
+  //   return sections;
+  // };
 
   return (
     <div className="space-y-6">
