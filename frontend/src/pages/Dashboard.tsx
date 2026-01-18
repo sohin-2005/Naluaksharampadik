@@ -170,7 +170,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-                  Naalu Aksharam Padikk
+                  4aksharampadikk
                 </h1>
                 <p className="text-sm text-gray-300">Connect. Learn. Grow Together.</p>
               </div>
@@ -335,7 +335,7 @@ export default function Dashboard() {
               </TabsContent>
 
               <TabsContent value="profile" className="mt-6">
-                <ProfileTab userRole={userProfile.role} setUserRole={() => {}} />
+                <ProfileTab userRole={userProfile.role} setUserRole={() => { }} />
               </TabsContent>
             </Tabs>
           </>
@@ -460,7 +460,7 @@ export default function Dashboard() {
                   </TabsContent>
 
                   <TabsContent value="profile" className="mt-6">
-                    <ProfileTab userRole={userProfile.role} setUserRole={() => {}} />
+                    <ProfileTab userRole={userProfile.role} setUserRole={() => { }} />
                   </TabsContent>
                 </>
               )}
@@ -499,7 +499,7 @@ export default function Dashboard() {
                   </TabsContent>
 
                   <TabsContent value="profile" className="mt-6">
-                    <ProfileTab userRole={userProfile.role} setUserRole={() => {}} />
+                    <ProfileTab userRole={userProfile.role} setUserRole={() => { }} />
                   </TabsContent>
                 </>
               )}
