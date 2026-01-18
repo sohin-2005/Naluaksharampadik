@@ -111,22 +111,19 @@ export function MentorCommandCenter() {
     try {
       const enriched = await Promise.all(
         list.map(async (mentee) => {
-          const [{ data: log }] = await Promise.all([
-            supabase
-              .from('study_logs')
-              .select('created_at, duration_minutes')
-              .eq('user_id', mentee.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
-              .throwOnError(),
-          ]);
+          const { data: log, error: logError } = await supabase
+            .from('study_logs')
+            .select('created_at, duration_minutes')
+            .eq('user_id', mentee.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          const { data: streakData } = await supabase
+          const { data: streakData, error: streakError } = await supabase
             .from('user_streaks')
             .select('current_streak, longest_streak')
             .eq('user_id', mentee.id)
-            .single();
+            .maybeSingle();
 
           const { data: plans } = await supabase
             .from('catch_up_plans')
@@ -267,7 +264,7 @@ export function MentorCommandCenter() {
         .from('study_logs')
         .select('date, created_at, duration_minutes')
         .eq('user_id', menteeId)
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(60);
 
       if (error) {

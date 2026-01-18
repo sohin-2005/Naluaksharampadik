@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Users, Clock, Calendar, MapPin, Award, Briefcase } from 'lucide-react';
+import { Users, Clock, Calendar, MapPin, Award, Briefcase, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,11 +42,15 @@ export default function AvailableMentorsPanel() {
   const [connectionMessage, setConnectionMessage] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [activeTab, setActiveTab] = useState<'mentors' | 'alumni'>('mentors');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     if (userProfile?.role === 'student') {
       fetchMentors();
       fetchAlumni();
+      fetchExistingRequests();
     }
   }, [userProfile]);
 
@@ -101,45 +105,165 @@ export default function AvailableMentorsPanel() {
     }
   };
 
+  const fetchExistingRequests = async () => {
+    if (!userProfile?.id) return;
+    
+    try {
+      // Fetch existing mentor connection requests
+      const { data: mentorRequests, error: mentorError } = await supabase
+        .from('mentorship_connections')
+        .select('mentor_id')
+        .eq('mentee_id', userProfile.id)
+        .in('status', ['pending', 'active']);
+
+      if (mentorError) {
+        console.error('Error fetching mentor requests:', mentorError);
+      } else if (mentorRequests) {
+        const mentorIds = mentorRequests.map(r => r.mentor_id);
+        setSentRequests(prev => {
+          const newSet = new Set(prev);
+          mentorIds.forEach(id => newSet.add(id));
+          return newSet;
+        });
+      }
+
+      // Fetch existing alumni connection requests
+      const { data: alumniRequests, error: alumniError } = await supabase
+        .from('alumni_connections')
+        .select('alumni_id')
+        .eq('student_id', userProfile.id)
+        .in('status', ['pending', 'active']);
+
+      if (alumniError) {
+        console.error('Error fetching alumni requests:', alumniError);
+      } else if (alumniRequests) {
+        const alumniIds = alumniRequests.map(r => r.alumni_id);
+        setSentRequests(prev => {
+          const newSet = new Set(prev);
+          alumniIds.forEach(id => newSet.add(id));
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching existing requests:', error);
+    }
+  };
+
   const handleConnect = async () => {
-    if (!selectedPerson || !userProfile) return;
+    if (!selectedPerson || !userProfile) {
+      console.error('Missing selectedPerson or userProfile', { selectedPerson, userProfile });
+      setIsError(true);
+      setSuccessMessage('Error: User profile not loaded. Please refresh the page.');
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setIsError(false);
+      }, 4000);
+      return;
+    }
+
+    // Validate that we have valid UUIDs
+    if (!selectedPerson.id || !userProfile.id) {
+      console.error('Invalid IDs', { selectedPersonId: selectedPerson.id, userProfileId: userProfile.id });
+      setIsError(true);
+      setSuccessMessage('Error: Invalid user IDs. Please refresh and try again.');
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setIsError(false);
+      }, 4000);
+      return;
+    }
 
     setIsConnecting(true);
+    console.log('🔄 Sending connection request...', {
+      selectedPerson: selectedPerson.full_name,
+      selectedPersonId: selectedPerson.id,
+      role: selectedPerson.role,
+      userProfile: userProfile.full_name,
+      userId: userProfile.id
+    });
+
     try {
       if (selectedPerson.role === 'mentor') {
-        const { error } = await supabase
+        console.log('📤 Inserting into mentorship_connections table...');
+        const insertData = {
+          mentor_id: selectedPerson.id,
+          mentee_id: userProfile.id,
+          status: 'pending'
+        };
+        console.log('Insert data:', insertData);
+        
+        const { data, error } = await supabase
           .from('mentorship_connections')
-          .insert([{
-            mentor_id: selectedPerson.id,
-            mentee_id: userProfile.id,
-            status: 'pending'
-          }]);
+          .insert([insertData])
+          .select();
         
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Mentorship connection error:', error);
+          throw error;
+        }
+        console.log('✅ Mentorship connection created:', data);
       } else {
-        const { error } = await supabase
-          .from('alumni_connections')
-          .insert([{
-            alumni_id: selectedPerson.id,
-            student_id: userProfile.id,
-            status: 'pending',
-            message: connectionMessage
-          }]);
+        console.log('📤 Inserting into alumni_connections table...');
+        const insertData = {
+          alumni_id: selectedPerson.id,
+          student_id: userProfile.id,
+          status: 'pending',
+          message: connectionMessage || null
+        };
+        console.log('Insert data:', insertData);
         
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from('alumni_connections')
+          .insert([insertData])
+          .select();
+        
+        if (error) {
+          console.error('❌ Alumni connection error:', error);
+          throw error;
+        }
+        console.log('✅ Alumni connection created:', data);
       }
 
-      alert('Connection request sent successfully!');
+      // Mark this person as requested
+      setSentRequests(prev => new Set(prev).add(selectedPerson.id));
+      
+      // Show success message
+      setIsError(false);
+      setSuccessMessage(`Connection request sent successfully to ${selectedPerson.full_name}! They will be notified and can accept your request.`);
+      
       setShowDialog(false);
       setConnectionMessage('');
-      setSelectedPerson(null);
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setSelectedPerson(null);
+      }, 5000);
     } catch (error: any) {
-      console.error('Error sending connection request:', error);
+      console.error('❌ Error sending connection request:', error);
+      
+      let errorMessage = 'Failed to send connection request. ';
+      
       if (error.code === '23505') {
-        alert('You have already sent a request to this person.');
+        errorMessage = 'You have already sent a connection request to this person.';
+      } else if (error.code === '23503') {
+        errorMessage = 'User profile error. Please complete your profile first.';
+      } else if (error.message?.includes('permission') || error.message?.includes('CORS')) {
+        errorMessage = 'Permission denied. Please check your network and try again.';
+      } else if (error.message?.includes('RLS')) {
+        errorMessage = 'Database configuration error. Administrators have been notified.';
+      } else if (error.message) {
+        errorMessage += error.message;
       } else {
-        alert('Failed to send connection request. Please try again.');
+        errorMessage += 'Please try again.';
       }
+      
+      setIsError(true);
+      setSuccessMessage(errorMessage);
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setIsError(false);
+      }, 6000);
     } finally {
       setIsConnecting(false);
     }
@@ -153,6 +277,7 @@ export default function AvailableMentorsPanel() {
   const renderPersonCard = (person: MentorProfile, isAlumni: boolean = false) => {
     const alumniPerson = person as AlumniProfile;
     const personAvailability = availability[person.id] || [];
+    const hasRequestedConnection = sentRequests.has(person.id);
 
     return (
       <div
@@ -236,11 +361,21 @@ export default function AvailableMentorsPanel() {
 
             <Button
               size="sm"
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className={hasRequestedConnection ? "w-full bg-emerald-600 hover:bg-emerald-700" : "w-full bg-indigo-600 hover:bg-indigo-700"}
               onClick={() => handleOpenDialog(person)}
+              disabled={hasRequestedConnection}
             >
-              <Users className="w-4 h-4 mr-2" />
-              Connect with {person.full_name.split(' ')[0]}
+              {hasRequestedConnection ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Request Sent
+                </>
+              ) : (
+                <>
+                  <Users className="w-4 h-4 mr-2" />
+                  Connect with {person.full_name.split(' ')[0]}
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -250,6 +385,21 @@ export default function AvailableMentorsPanel() {
 
   return (
     <>
+      {/* Success/Error Message Toast */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2">
+          <div className={`${isError ? 'bg-red-900 border-red-500' : 'bg-emerald-900 border-emerald-500'} border text-white px-6 py-4 rounded-lg shadow-lg max-w-md`}>
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className={`w-5 h-5 ${isError ? 'text-red-400' : 'text-emerald-400'} mt-0.5 flex-shrink-0`} />
+              <div>
+                <p className="font-semibold mb-1">{isError ? 'Error' : 'Success!'}</p>
+                <p className={`text-sm ${isError ? 'text-red-100' : 'text-emerald-100'}`}>{successMessage}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Card className="bg-neutral-900 border border-neutral-800">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">

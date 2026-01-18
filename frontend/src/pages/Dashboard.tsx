@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { GraduationCap, Target, Users, TrendingUp, Activity, LogOut, BarChart3, BookMarked, FolderGit2 } from 'lucide-react';
+import { GraduationCap, Target, Users, TrendingUp, Activity, LogOut, BarChart3, BookMarked, FolderGit2, Zap } from 'lucide-react';
 import MentorshipTab from '../components/MentorshipTab';
 import { StudyLogTab } from '../components/StudyLogTab';
 import { CatchUpTab } from '../components/CatchUpTab';
@@ -380,7 +380,7 @@ export default function Dashboard() {
                       <BarChart3 className="size-4" />
                       <span className="hidden sm:inline text-xs">Dashboard</span>
                     </TabsTrigger>
-                    <TabsTrigger value="timeline" className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-200">
+                    <TabsTrigger value="timeline" className="flex items-center gap-2 py-3 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-200">
                       <TrendingUp className="size-4" />
                       <span className="hidden sm:inline text-xs">Timeline</span>
                     </TabsTrigger>
@@ -388,13 +388,13 @@ export default function Dashboard() {
                       <Users className="size-4" />
                       <span className="hidden sm:inline text-xs">Requests</span>
                     </TabsTrigger>
+                    <TabsTrigger value="catchup" className="flex items-center gap-2 py-3 data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-200">
+                      <Zap className="size-4" />
+                      <span className="hidden sm:inline text-xs">Catch-Up</span>
+                    </TabsTrigger>
                     <TabsTrigger value="playbooks" className="flex items-center gap-2 py-3 data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-200">
                       <BookMarked className="size-4" />
                       <span className="hidden sm:inline text-xs">Playbooks</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="community" className="flex items-center gap-2 py-3 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-200">
-                      <Activity className="size-4" />
-                      <span className="hidden sm:inline text-xs">Community</span>
                     </TabsTrigger>
                     <TabsTrigger value="profile" className="flex items-center gap-2 py-3 data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-100">
                       <GraduationCap className="size-4" />
@@ -451,12 +451,12 @@ export default function Dashboard() {
                     <ConnectionRequestsPanel />
                   </TabsContent>
 
-                  <TabsContent value="playbooks" className="mt-6">
-                    <MentorPlaybooksSection />
+                  <TabsContent value="catchup" className="mt-6">
+                    <CatchUpPlanSimulator />
                   </TabsContent>
 
-                  <TabsContent value="community" className="mt-6">
-                    <CommunityFeedTab />
+                  <TabsContent value="playbooks" className="mt-6">
+                    <MentorPlaybooksSection />
                   </TabsContent>
 
                   <TabsContent value="profile" className="mt-6">

@@ -53,7 +53,7 @@ export default function AcademicRadarPanel() {
           .from('study_logs')
           .select('id, date, created_at, duration_minutes')
           .eq('user_id', conn.mentee_id)
-          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(7);
 
         if (logsError) {
@@ -64,7 +64,7 @@ export default function AcademicRadarPanel() {
           .from('user_streaks')
           .select('current_streak')
           .eq('user_id', conn.mentee_id)
-          .single();
+          .maybeSingle();
 
         if (streakError && streakError.code !== 'PGRST116') {
           console.error(`Error fetching streak for ${conn.mentee_id}:`, streakError);
