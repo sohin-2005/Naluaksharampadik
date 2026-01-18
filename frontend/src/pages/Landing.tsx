@@ -1,16 +1,49 @@
 import { Link } from 'react-router-dom';
-import { GraduationCap, Users, Target, TrendingUp, ArrowRight, CheckCircle, Sparkles, Brain, Calendar, Zap, BookOpen, Award } from 'lucide-react';
+import { GraduationCap, Users, Target, TrendingUp, ArrowRight, CheckCircle, Sparkles, Calendar, Zap, BookOpen, Award } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { AboutModal } from '../components/AboutModal';
+import { ContactModal } from '../components/ContactModal';
+import { HelpCenterModal } from '../components/HelpCenterModal';
+import { ParticleBackground } from '../components/ParticleBackground';
+import { motion } from 'framer-motion';
 
 export default function Landing() {
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-black text-gray-100">
+    <div className="min-h-screen bg-black text-gray-100 overflow-x-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 right-1/3 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 10, repeat: Infinity, delay: 1 }}
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 12, repeat: Infinity, delay: 2 }}
+          className="absolute top-1/2 right-1/3 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"
+        />
+        <ParticleBackground />
       </div>
 
       {/* Navigation */}
@@ -23,9 +56,9 @@ export default function Landing() {
               </div>
               <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-                  Naalu Aksharam Padikk
+                  4aksharampadikk
                 </h1>
-                
+
                 <p className="text-xs text-gray-400 -mt-1">Connect. Learn. Grow Together.</p>
               </div>
             </div>
@@ -44,20 +77,26 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={fadeInUp}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative"
+      >
         <div className="text-center max-w-5xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-8">
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-8">
             <Sparkles className="size-4 text-purple-300" />
-            <span className="text-sm text-purple-200">AI-Powered Academic Success Platform</span>
-          </div>
-          <h2 className="text-6xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-fuchsia-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent leading-tight">
+            <span className="text-sm text-purple-200">AI-Powered MEC Success Platform</span>
+          </motion.div>
+          <motion.h2 variants={fadeInUp} className="text-6xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-fuchsia-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent leading-snug pb-4">
             Never Feel Lost<br />Academically Again
-          </h2>
-          <p className="text-xl text-gray-300 mb-10 leading-relaxed max-w-3xl mx-auto">
+          </motion.h2>
+          <motion.p variants={fadeInUp} className="text-xl text-gray-300 mb-10 leading-relaxed max-w-3xl mx-auto">
             Too many juniors feel lost academically, simply because they don't know who to approach—
             even though there are seniors ready and willing to help. <span className="text-fuchsia-300 font-semibold">We're solving this disconnect with AI.</span>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          </motion.p>
+          <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Link to="/signup">
               <Button size="lg" className="bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 text-lg px-10 py-7 shadow-2xl shadow-fuchsia-500/30 transition-all hover:scale-105">
                 Start Your Journey <ArrowRight className="ml-2 size-5" />
@@ -68,32 +107,45 @@ export default function Landing() {
                 I Already Have Account
               </Button>
             </Link>
-          </div>
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-400">
-            <div className="flex items-center gap-2">
+          </motion.div>
+          <motion.div variants={staggerContainer} initial="hidden" whileInView="visible" className="flex flex-wrap justify-center gap-8 text-sm text-gray-400">
+            <motion.div variants={fadeInUp} className="flex items-center gap-2">
               <CheckCircle className="size-5 text-emerald-400" />
               <span>AI-Powered Planning</span>
-            </div>
-            <div className="flex items-center gap-2">
+            </motion.div>
+            <motion.div variants={fadeInUp} className="flex items-center gap-2">
               <CheckCircle className="size-5 text-emerald-400" />
               <span>Verified Mentors</span>
-            </div>
-            <div className="flex items-center gap-2">
+            </motion.div>
+            <motion.div variants={fadeInUp} className="flex items-center gap-2">
               <CheckCircle className="size-5 text-emerald-400" />
               <span>Study Streak Tracking</span>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* SemSense AI Feature Section - NEW */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
-        <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-fuchsia-500/10 rounded-3xl p-12 border border-purple-500/20 shadow-2xl shadow-purple-500/10">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+          className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-fuchsia-500/10 rounded-3xl p-12 border border-purple-500/20 shadow-2xl shadow-purple-500/10"
+        >
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/20 border border-indigo-500/30 mb-6">
-              <Brain className="size-5 text-indigo-300" />
-              <span className="text-sm font-semibold text-indigo-200">Powered by AI</span>
-            </div>
+            <motion.div
+              className="flex justify-center mb-6"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <img
+                src="/semsense-logo.png"
+                alt="SemSense AI"
+                className="h-20 md:h-24 object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+              />
+            </motion.div>
             <h3 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-400 via-purple-300 to-fuchsia-300 bg-clip-text text-transparent">
               SemSense AI: Your Personal Semester Planner
             </h3>
@@ -103,60 +155,76 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <Card className="bg-neutral-900/80 backdrop-blur border-indigo-500/30 hover:border-indigo-500/50 transition-all hover:shadow-xl hover:shadow-indigo-500/20">
-              <CardContent className="p-8">
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
-                  <Calendar className="size-8 text-white" />
-                </div>
-                <h4 className="font-bold text-2xl mb-3 text-white">Smart Timeline Planning</h4>
-                <p className="text-gray-300 mb-4 leading-relaxed">
-                  AI analyzes your semester dates, identifies holiday windows, and creates realistic weekly study goals that prevent burnout.
-                </p>
-                <ul className="space-y-2 text-gray-300">
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>Automatic holiday detection (Mini/Intermediate/Flagship)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>16-week structured roadmap</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <span>Weekly hour allocation per subject</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full bg-neutral-900/80 backdrop-blur border-indigo-500/30 hover:border-indigo-500/50 transition-all hover:shadow-xl hover:shadow-indigo-500/20">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
+                    <Calendar className="size-8 text-white" />
+                  </div>
+                  <h4 className="font-bold text-2xl mb-3 text-white">Smart Timeline Planning</h4>
+                  <p className="text-gray-300 mb-4 leading-relaxed">
+                    AI analyzes your semester dates, identifies holiday windows, and creates realistic weekly study goals that prevent burnout.
+                  </p>
+                  <ul className="space-y-2 text-gray-300">
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <span>Automatic holiday detection (Mini/Intermediate/Flagship)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <span>16-week structured roadmap</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <span>Weekly hour allocation per subject</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-neutral-900/80 backdrop-blur border-purple-500/30 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/20">
-              <CardContent className="p-8">
-                <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
-                  <BookOpen className="size-8 text-white" />
-                </div>
-                <h4 className="font-bold text-2xl mb-3 text-white">Workload Intelligence</h4>
-                <p className="text-gray-300 mb-4 leading-relaxed">
-                  Get personalized recommendations based on subject difficulty, your available hours, and academic interests.
-                </p>
-                <ul className="space-y-2 text-gray-300">
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
-                    <span>Subject difficulty analysis</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
-                    <span>Primary & supporting skills identification</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
-                    <span>Industry trend insights</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full bg-neutral-900/80 backdrop-blur border-purple-500/30 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/20">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-purple-500 to-fuchsia-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
+                    <BookOpen className="size-8 text-white" />
+                  </div>
+                  <h4 className="font-bold text-2xl mb-3 text-white">Workload Intelligence</h4>
+                  <p className="text-gray-300 mb-4 leading-relaxed">
+                    Get personalized recommendations based on subject difficulty, your available hours, and academic interests.
+                  </p>
+                  <ul className="space-y-2 text-gray-300">
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
+                      <span>Subject difficulty analysis</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
+                      <span>Primary & supporting skills identification</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Zap className="size-5 text-fuchsia-400 mt-0.5 flex-shrink-0" />
+                      <span>Industry trend insights</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
-          <div className="bg-neutral-900/60 backdrop-blur rounded-2xl p-8 border border-neutral-800/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.5 }}
+            className="bg-neutral-900/60 backdrop-blur rounded-2xl p-8 border border-neutral-800/50"
+          >
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-4 rounded-2xl shadow-xl flex-shrink-0">
                 <Award className="size-12 text-white" />
@@ -175,13 +243,19 @@ export default function Landing() {
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Problem Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
-        <div className="bg-neutral-900/60 backdrop-blur rounded-3xl p-12 shadow-xl border border-neutral-800/50">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+          className="bg-neutral-900/60 backdrop-blur rounded-3xl p-12 shadow-xl border border-neutral-800/50"
+        >
           <h3 className="text-4xl font-bold text-center mb-4 text-white">
             The Problems We're Solving
           </h3>
@@ -189,122 +263,167 @@ export default function Landing() {
             We identified three critical pain points that prevent students from reaching their full potential
           </p>
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="border-2 border-red-500/40 bg-gradient-to-br from-red-500/10 to-red-600/5 hover:shadow-2xl hover:shadow-red-500/20 transition-all">
-              <CardContent className="p-8">
-                <div className="text-5xl mb-4">😰</div>
-                <h4 className="font-bold text-xl mb-3 text-white">Guidance Disconnect</h4>
-                <p className="text-gray-200 leading-relaxed">
-                  Juniors don't know who to approach, and seniors willing to help go unnoticed
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5 hover:shadow-2xl hover:shadow-amber-500/20 transition-all">
-              <CardContent className="p-8">
-                <div className="text-5xl mb-4">😔</div>
-                <h4 className="font-bold text-xl mb-3 text-white">Inconsistency & Procrastination</h4>
-                <p className="text-gray-200 leading-relaxed">
-                  Students struggle to maintain consistent study habits without accountability
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-400/10 to-yellow-500/5 hover:shadow-2xl hover:shadow-yellow-400/20 transition-all">
-              <CardContent className="p-8">
-                <div className="text-5xl mb-4">😱</div>
-                <h4 className="font-bold text-xl mb-3 text-white">"It's Too Late" Panic</h4>
-                <p className="text-gray-200 leading-relaxed">
-                  Late starters receive vague advice instead of actionable recovery roadmaps
-                </p>
-              </CardContent>
-            </Card>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-red-500/40 bg-gradient-to-br from-red-500/10 to-red-600/5 hover:shadow-2xl hover:shadow-red-500/20 transition-all">
+                <CardContent className="p-8">
+                  <div className="text-5xl mb-4">😰</div>
+                  <h4 className="font-bold text-xl mb-3 text-white">Guidance Disconnect</h4>
+                  <p className="text-gray-200 leading-relaxed">
+                    Juniors don't know who to approach, and seniors willing to help go unnoticed
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5 hover:shadow-2xl hover:shadow-amber-500/20 transition-all">
+                <CardContent className="p-8">
+                  <div className="text-5xl mb-4">😔</div>
+                  <h4 className="font-bold text-xl mb-3 text-white">Inconsistency & Procrastination</h4>
+                  <p className="text-gray-200 leading-relaxed">
+                    Students struggle to maintain consistent study habits without accountability
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-400/10 to-yellow-500/5 hover:shadow-2xl hover:shadow-yellow-400/20 transition-all">
+                <CardContent className="p-8">
+                  <div className="text-5xl mb-4">😱</div>
+                  <h4 className="font-bold text-xl mb-3 text-white">"It's Too Late" Panic</h4>
+                  <p className="text-gray-200 leading-relaxed">
+                    Late starters receive vague advice instead of actionable recovery roadmaps
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Solution Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
-        <div className="text-center mb-12">
-          <h3 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
-            Our Comprehensive Solution
-          </h3>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            Three powerful pillars working together to transform your academic journey
-          </p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="border-2 border-indigo-500/40 bg-gradient-to-br from-neutral-900 to-indigo-950/20 hover:shadow-2xl hover:shadow-indigo-500/30 transition-all hover:-translate-y-1">
-            <CardContent className="p-8">
-              <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
-                <Users className="size-10 text-white" />
-              </div>
-              <h4 className="font-bold text-2xl mb-4 text-white">Verified Mentorship Network</h4>
-              <ul className="space-y-3 text-gray-200">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Connect with verified seniors without social friction</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Search by department, expertise, and ratings</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Direct messaging and guidance</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+        >
+          <div className="text-center mb-12">
+            <h3 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 bg-clip-text text-transparent">
+              Our Comprehensive Solution
+            </h3>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Three powerful pillars working together to transform your academic journey
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-indigo-500/40 bg-gradient-to-br from-neutral-900 to-indigo-950/20 hover:shadow-2xl hover:shadow-indigo-500/30 transition-all">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
+                    <Users className="size-10 text-white" />
+                  </div>
+                  <h4 className="font-bold text-2xl mb-4 text-white">Verified Mentorship Network</h4>
+                  <ul className="space-y-3 text-gray-200">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Connect with verified seniors without social friction</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Search by department, expertise, and ratings</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Direct messaging and guidance</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <Card className="border-2 border-purple-500/40 bg-gradient-to-br from-neutral-900 to-purple-950/20 hover:shadow-2xl hover:shadow-purple-500/30 transition-all hover:-translate-y-1">
-            <CardContent className="p-8">
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
-                <TrendingUp className="size-10 text-white" />
-              </div>
-              <h4 className="font-bold text-2xl mb-4 text-white">Social Accountability System</h4>
-              <ul className="space-y-3 text-gray-200">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Daily study logs to build consistency streaks</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Non-toxic environment with positive peer pressure</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Community feed to share progress</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-purple-500/40 bg-gradient-to-br from-neutral-900 to-purple-950/20 hover:shadow-2xl hover:shadow-purple-500/30 transition-all">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
+                    <TrendingUp className="size-10 text-white" />
+                  </div>
+                  <h4 className="font-bold text-2xl mb-4 text-white">Social Accountability System</h4>
+                  <ul className="space-y-3 text-gray-200">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Daily study logs to build consistency streaks</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Non-toxic environment with positive peer pressure</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Community feed to share progress</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <Card className="border-2 border-pink-500/40 bg-gradient-to-br from-neutral-900 to-pink-950/20 hover:shadow-2xl hover:shadow-pink-500/30 transition-all hover:-translate-y-1">
-            <CardContent className="p-8">
-              <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
-                <Target className="size-10 text-white" />
-              </div>
-              <h4 className="font-bold text-2xl mb-4 text-white">Smart Catch-Up Plans</h4>
-              <ul className="space-y-3 text-gray-200">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Time-optimized recovery roadmaps</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Senior-approved study plans</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span>Track progress and adjust as needed</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="h-full border-2 border-pink-500/40 bg-gradient-to-br from-neutral-900 to-pink-950/20 hover:shadow-2xl hover:shadow-pink-500/30 transition-all">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-3 rounded-xl w-fit mb-4 shadow-lg">
+                    <Target className="size-10 text-white" />
+                  </div>
+                  <h4 className="font-bold text-2xl mb-4 text-white">Smart Catch-Up Plans</h4>
+                  <ul className="space-y-3 text-gray-200">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Time-optimized recovery roadmaps</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Senior-approved study plans</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="size-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <span>Track progress and adjust as needed</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Stats Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
-        <div className="bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 rounded-3xl p-16 text-white shadow-2xl shadow-purple-500/40">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+          className="bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 rounded-3xl p-16 text-white shadow-2xl shadow-purple-500/40"
+        >
           <h3 className="text-4xl font-bold text-center mb-4">Join Our Growing Community</h3>
           <p className="text-center text-purple-100 mb-12 text-lg">Real students, real progress, real results</p>
           <div className="grid md:grid-cols-3 gap-12 text-center">
@@ -324,12 +443,18 @@ export default function Landing() {
               <div className="text-sm text-purple-200 mt-2">Never too late to start</div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* CTA Section */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center relative">
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-16 border border-neutral-800/50 shadow-2xl">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+          className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-16 border border-neutral-800/50 shadow-2xl"
+        >
           <h3 className="text-5xl font-bold mb-6 bg-gradient-to-r from-fuchsia-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
             Ready to Transform Your Academic Journey?
           </h3>
@@ -342,7 +467,7 @@ export default function Landing() {
             </Button>
           </Link>
           <p className="text-sm text-gray-500 mt-6">No credit card required • Free forever • Join in 2 minutes</p>
-        </div>
+        </motion.div>
       </section>
 
       {/* Footer */}
@@ -354,12 +479,19 @@ export default function Landing() {
                 <GraduationCap className="size-6 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-white">Naalu Aksharam Padikk</p>
+                <p className="font-semibold text-white">4aksharampadikk</p>
                 <p className="text-xs text-gray-400">Academic success, simplified</p>
               </div>
             </div>
+
+            <div className="flex flex-wrap justify-center gap-6">
+              <AboutModal />
+              <ContactModal />
+              <HelpCenterModal />
+            </div>
+
             <div className="text-center text-gray-400">
-              <p>© 2026 Naalu Aksharam Padikk. Built with ❤️ for students.</p>
+              <p>© 2026 4aksharampadikk. Built with ❤️ for students.</p>
             </div>
           </div>
         </div>
