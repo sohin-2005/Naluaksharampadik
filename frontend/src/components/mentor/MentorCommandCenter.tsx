@@ -111,7 +111,7 @@ export function MentorCommandCenter() {
     try {
       const enriched = await Promise.all(
         list.map(async (mentee) => {
-          const { data: log, error: logError } = await supabase
+          const { data: log } = await supabase
             .from('study_logs')
             .select('created_at, duration_minutes')
             .eq('user_id', mentee.id)
@@ -119,7 +119,7 @@ export function MentorCommandCenter() {
             .limit(1)
             .maybeSingle();
 
-          const { data: streakData, error: streakError } = await supabase
+          const { data: streakData } = await supabase
             .from('user_streaks')
             .select('current_streak, longest_streak')
             .eq('user_id', mentee.id)

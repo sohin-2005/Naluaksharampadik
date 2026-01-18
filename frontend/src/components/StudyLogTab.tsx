@@ -121,7 +121,7 @@ export function StudyLogTab({
         const fileExt = file.name.split('.').pop();
         const fileName = `${userProfile.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('study-attachments')
           .upload(fileName, file, {
             cacheControl: '3600',
